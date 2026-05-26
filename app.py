@@ -215,3 +215,175 @@ top_projects = (
 )
 
 st.dataframe(top_projects)
+
+
+# ---------------------------------------------------
+# OFFSHORE WIND FEASIBILITY CALCULATOR
+# ---------------------------------------------------
+
+st.header("Offshore Wind Feasibility Calculator")
+
+st.write(
+    """
+    This section estimates basic engineering and commercial metrics for offshore wind projects.
+    The model is simplified and intended for educational/CV project purposes.
+    """
+)
+
+# Filter to offshore wind projects only
+offshore_df = filtered_df[
+    filtered_df["Technology Type"].str.contains("Offshore Wind", case=False, na=False)
+].copy()
+
+if offshore_df.empty:
+    st.warning(
+        "No offshore wind projects are currently visible. "
+        "Change the filters in the sidebar to include Offshore Wind projects."
+    )
+
+else:
+    # Select a project
+    project_names = sorted(offshore_df["Site Name"].dropna().unique())
+
+    selected_project = st.selectbox(
+        "Select an offshore wind project",
+        project_names
+    )
+
+    project_row = offshore_df[
+        offshore_df["Site Name"] == selected_project
+    ].iloc[0]
+
+    project_capacity = project_row["Installed Capacity (MWelec)"]
+
+    st.subheader("Selected Project")
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.metric("Project", selected_project)
+
+    with col2:
+        st.metric("Capacity", f"{project_capacity:,.0f} MW")
+
+    with col3:
+        st.metric("Region", project_row["Region"])
+
+    st.subheader("Assumptions")
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        capacity_factor = st.slider(
+            "Capacity factor",
+            min_value=0.20,
+            max_value=0.70,
+            value=0.45,
+            step=0.01
+        )
+
+    with col2:
+        turbine_rating = st.slider(
+            "Turbine rating (MW)",
+            min_value=5.0,
+            max_value=25.0,
+            value=15.0,
+            step=0.5
+        )
+
+    with col3:
+        electricity_price = st.slider(
+            "Electricity price (£/MWh)",
+            min_value=20,
+            max_value=200,
+            value=70,
+            step=5
+        )
+
+    col4, col5 = st.columns(2)
+
+    with col4:
+        capex_per_mw = st.slider(
+            "CAPEX (£ million per MW)",
+            min_value=1.0,
+            max_value=8.0,
+            value=3.0,
+            step=0.1
+        )
+
+    with col5:
+        lifetime = st.slider(
+            "Project lifetime (years)",
+            min_value=10,
+            max_value=40,
+            value=25,
+            step=1
+        )
+
+    # Calculations
+    annual_energy_mwh = project_capacity * capacity_factor * 8760
+    number_of_turbines = project_capacity / turbine_rating
+    annual_revenue = annual_energy_mwh * electricity_price
+    total_capex = project_capacity * capex_per_mw * 1_000_000
+    simple_payback = total_capex / annual_revenue
+    lifetime_revenue = annual_revenue * lifetime
+
+    st.subheader("Calculated Results")
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.metric(
+            "Estimated annual energy",
+            f"{annual_energy_mwh:,.0f} MWh/year"
+        )
+
+    with col2:
+        st.metric(
+            "Estimated number of turbines",
+            f"{number_of_turbines:,.1f}"
+        )
+
+    with col3:
+        st.metric(
+            "Estimated annual revenue",
+            f"£{annual_revenue / 1_000_000:,.1f} million/year"
+        )
+
+    col4, col5, col6 = st.columns(3)
+
+    with col4:
+        st.metric(
+            "Estimated CAPEX",
+            f"£{total_capex / 1_000_000_000:,.2f} billion"
+        )
+
+    with col5:
+        st.metric(
+            "Simple payback period",
+            f"{simple_payback:,.1f} years"
+        )
+
+    with col6:
+        st.metric(
+            "Lifetime revenue",
+            f"£{lifetime_revenue / 1_000_000_000:,.2f} billion"
+        )
+
+    st.subheader("Methodology")
+
+    st.write(
+        """
+        The calculations use the following simplified formulas:
+
+        - Annual energy generation = capacity × capacity factor × 8760
+        - Number of turbines = project capacity ÷ turbine rating
+        - Annual revenue = annual energy generation × electricity price
+        - Total CAPEX = project capacity × CAPEX per MW
+        - Simple payback = total CAPEX ÷ annual revenue
+
+        These values are approximate and do not include financing costs, operational expenditure,
+        grid connection costs, curtailment, maintenance downtime, inflation, strike prices,
+        decommissioning costs or detailed wind resource modelling.
+        """
+    )
