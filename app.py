@@ -328,6 +328,17 @@ else:
     simple_payback = total_capex / annual_revenue
     lifetime_revenue = annual_revenue * lifetime
 
+    grid_carbon_intensity = st.slider(
+        "Displaced grid carbon intensity (kg CO₂e/kWh)",
+        min_value=0.00,
+        max_value=0.60,
+        value=0.20,
+        step=0.01
+    )
+
+    annual_carbon_savings_tonnes = annual_energy_mwh * grid_carbon_intensity
+    lifetime_carbon_savings_tonnes = annual_carbon_savings_tonnes * lifetime
+
     st.subheader("Calculated Results")
 
     col1, col2, col3 = st.columns(3)
@@ -370,6 +381,20 @@ else:
             f"£{lifetime_revenue / 1_000_000_000:,.2f} billion"
         )
 
+    col7, col8 = st.columns(2)
+
+    with col7:
+        st.metric(
+            "Estimated annual carbon savings",
+            f"{annual_carbon_savings_tonnes:,.0f} tonnes CO₂e/year"
+        )
+
+    with col8:
+        st.metric(
+            "Estimated lifetime carbon savings",
+            f"{lifetime_carbon_savings_tonnes:,.0f} tonnes CO₂e"
+        )
+
     st.subheader("Methodology")
 
     st.write(
@@ -381,6 +406,8 @@ else:
         - Annual revenue = annual energy generation × electricity price
         - Total CAPEX = project capacity × CAPEX per MW
         - Simple payback = total CAPEX ÷ annual revenue
+        - Annual carbon savings = annual energy generation × displaced grid carbon intensity
+        - Lifetime carbon savings = annual carbon savings × project lifetime
 
         These values are approximate and do not include financing costs, operational expenditure,
         grid connection costs, curtailment, maintenance downtime, inflation, strike prices,
