@@ -11,14 +11,16 @@ from pyproj import Transformer
 
 st.set_page_config(
     page_title="Renewable Project Screening Studio",
+    page_icon="⚡",
     layout="wide",
 )
 
 # ---------------------------------------------------
-# PATHS
+# PATHS / LINKS
 # ---------------------------------------------------
 
 DATA_PATH = Path("data/renewable_projects.csv")
+GITHUB_URL = "https://github.com/hj-nakamura421/uk-renewable-energy-dashboard"
 
 # ---------------------------------------------------
 # CSS
@@ -28,9 +30,12 @@ st.markdown(
     """
     <style>
     .block-container {
-        padding-top: 2rem;
+        padding-top: 1.6rem;
         padding-bottom: 3rem;
-        max-width: 1180px;
+        padding-left: 2.7rem;
+        padding-right: 2.7rem;
+        max-width: none;
+        width: 100%;
     }
 
     #MainMenu, footer, header {
@@ -43,28 +48,27 @@ st.markdown(
     }
 
     h1 {
-        font-size: clamp(2.25rem, 4vw, 3.75rem);
+        font-size: clamp(2.1rem, 3.4vw, 3.35rem);
         line-height: 1.12;
         font-weight: 680;
         letter-spacing: 0.005em;
         word-spacing: 0.08em;
         color: #111111;
-        margin-bottom: 0.85rem;
-        max-width: 1100px;
+        margin-bottom: 0.7rem;
+        max-width: 1050px;
     }
 
     h2 {
-        font-size: clamp(1.55rem, 2.4vw, 2.15rem);
-        line-height: 1.15;
-        font-weight: 670;
-        letter-spacing: -0.005em;
+        font-size: clamp(1.45rem, 2.1vw, 1.95rem);
+        line-height: 1.16;
+        font-weight: 650;
         color: #111111;
-        margin-top: 2.2rem;
-        margin-bottom: 0.95rem;
+        margin-top: 2rem;
+        margin-bottom: 0.8rem;
     }
 
     h3 {
-        font-size: 1.13rem;
+        font-size: 1.1rem;
         font-weight: 610;
         color: #111111;
     }
@@ -72,30 +76,30 @@ st.markdown(
     p, li {
         color: #3A3A3C;
         font-size: 1rem;
-        line-height: 1.62;
+        line-height: 1.6;
     }
 
     .stMarkdown p {
-        max-width: 900px;
+        max-width: 980px;
     }
 
     [data-testid="stMetric"] {
         background: #FFFFFF;
         border: 1px solid #E7E7E2;
-        padding: 1.05rem 1.15rem;
+        padding: 1rem 1.1rem;
         border-radius: 1.05rem;
         box-shadow: 0 10px 28px rgba(0, 0, 0, 0.035);
     }
 
     [data-testid="stMetricLabel"] {
         color: #737373;
-        font-size: 0.84rem;
+        font-size: 0.82rem;
         font-weight: 520;
     }
 
     [data-testid="stMetricValue"] {
         color: #111111;
-        font-size: 1.36rem;
+        font-size: 1.28rem;
         font-weight: 650;
         letter-spacing: -0.005em;
     }
@@ -106,21 +110,23 @@ st.markdown(
         border: 1px solid #E7E7E2;
     }
 
-    /* Download button fix */
-    div[data-testid="stDownloadButton"] button {
+    div[data-testid="stDownloadButton"] button,
+    div[data-testid="stLinkButton"] a {
         border-radius: 999px !important;
         background-color: #111111 !important;
         color: #FFFFFF !important;
         border: 1px solid #111111 !important;
         font-weight: 650 !important;
-        padding: 0.55rem 1.25rem !important;
+        padding: 0.55rem 1.15rem !important;
     }
 
-    div[data-testid="stDownloadButton"] button * {
+    div[data-testid="stDownloadButton"] button *,
+    div[data-testid="stLinkButton"] a * {
         color: #FFFFFF !important;
     }
 
-    div[data-testid="stDownloadButton"] button:hover {
+    div[data-testid="stDownloadButton"] button:hover,
+    div[data-testid="stLinkButton"] a:hover {
         background-color: #303030 !important;
         border-color: #303030 !important;
         color: #FFFFFF !important;
@@ -135,27 +141,34 @@ st.markdown(
         display: none;
     }
 
-    /* Make Streamlit tabs look like an obvious navigation bar */
     .stTabs [data-baseweb="tab-list"] {
-        gap: 0.4rem;
+        gap: 0.45rem;
         background: #FFFFFF;
-        border: 1px solid #E7E7E2;
+        border: 1px solid #E2E2DD;
         border-radius: 999px;
-        padding: 0.35rem;
-        box-shadow: 0 10px 28px rgba(0, 0, 0, 0.035);
-        margin-top: 1rem;
-        margin-bottom: 1.5rem;
+        padding: 0.42rem;
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.04);
+        margin-top: 0.75rem;
+        margin-bottom: 1.45rem;
         flex-wrap: wrap;
+        position: sticky;
+        top: 0.6rem;
+        z-index: 20;
     }
 
     .stTabs [data-baseweb="tab"] {
-        height: 2.7rem;
+        height: 2.75rem;
         border-radius: 999px;
-        padding: 0.45rem 0.9rem;
+        padding: 0.45rem 0.95rem;
         font-size: 0.94rem;
-        font-weight: 640;
+        font-weight: 650;
         color: #555555;
         background: transparent;
+    }
+
+    .stTabs [data-baseweb="tab"] p {
+        font-size: 0.94rem;
+        font-weight: 650;
     }
 
     .stTabs [data-baseweb="tab"][aria-selected="true"] {
@@ -167,20 +180,21 @@ st.markdown(
         color: #FFFFFF;
     }
 
-    .stTabs [data-baseweb="tab-highlight"] {
-        display: none;
-    }
-
+    .stTabs [data-baseweb="tab-highlight"],
     .stTabs [data-baseweb="tab-border"] {
         display: none;
     }
 
-    /* Expander polish */
     details {
         border-radius: 1rem !important;
     }
 
-    @media (max-width: 800px) {
+    @media (max-width: 900px) {
+        .block-container {
+            padding-left: 1rem;
+            padding-right: 1rem;
+        }
+
         h1 {
             word-spacing: 0.03em;
         }
@@ -353,6 +367,34 @@ def safe_filename(name: str) -> str:
     )
 
 
+def apply_search(data: pd.DataFrame, query: str) -> pd.DataFrame:
+    if not query.strip():
+        return data
+
+    searchable_columns = [
+        "Site Name",
+        "Operator (or Applicant)",
+        "Technology Type",
+        "Development Status (short)",
+        "Region",
+        "County",
+        "Planning Authority",
+        "Planning Application Reference",
+    ]
+
+    available_columns = [col for col in searchable_columns if col in data.columns]
+
+    search_text = (
+        data[available_columns]
+        .fillna("")
+        .astype(str)
+        .agg(" ".join, axis=1)
+        .str.lower()
+    )
+
+    return data[search_text.str.contains(query.lower(), na=False)].copy()
+
+
 # ---------------------------------------------------
 # LOAD DATA
 # ---------------------------------------------------
@@ -364,41 +406,43 @@ except Exception as e:
     st.code(str(e))
     st.stop()
 
+latest_dataset_update_text = "N/A"
+
+if "Record Last Updated Parsed" in df.columns:
+    latest_dataset_update = df["Record Last Updated Parsed"].max()
+    if pd.notna(latest_dataset_update):
+        latest_dataset_update_text = latest_dataset_update.strftime("%d %b %Y")
+
 # ---------------------------------------------------
 # HEADER
 # ---------------------------------------------------
 
-top_left, top_right = st.columns([1.5, 1])
+with st.container(border=True):
+    header_left, header_right = st.columns([1.8, 1])
 
-with top_left:
-    st.caption("Renewable infrastructure intelligence")
+    with header_left:
+        st.title("UK Renewable Project Screening Dashboard")
+        st.write(
+            """
+            An interactive UK renewable energy dashboard for exploring renewable energy planning data,
+            screening infrastructure projects, mapping project locations, comparing regional capacity
+            and modelling offshore wind feasibility.
+            """
+        )
 
-with top_right:
-    st.caption("Portfolio project · UK planning data · Python/Streamlit")
+    with header_right:
+        search_query = st.text_input(
+            "Search projects",
+            placeholder="Search Dogger Bank, solar, Scotland, battery...",
+        )
 
-st.title("Renewable Project Screening Studio")
+        stat_col1, stat_col2 = st.columns(2)
 
-st.write(
-    """
-    A project-screening dashboard for UK renewable energy infrastructure.
-    Use the controls, move through the sections, and generate quick project briefs or offshore wind estimates.
-    """
-)
+        with stat_col1:
+            st.metric("Dataset records", f"{len(df):,}")
 
-# ---------------------------------------------------
-# QUICK GUIDE
-# ---------------------------------------------------
-
-guide_col1, guide_col2, guide_col3 = st.columns(3)
-
-with guide_col1:
-    st.info("**1. Filter** projects by technology, stage or region.")
-
-with guide_col2:
-    st.info("**2. Explore** the overview, pipeline and map sections.")
-
-with guide_col3:
-    st.info("**3. Generate** a project brief or offshore wind estimate.")
+        with stat_col2:
+            st.metric("Latest update", latest_dataset_update_text)
 
 # ---------------------------------------------------
 # FILTERS
@@ -408,7 +452,7 @@ technology_options = sorted(df["Technology Type"].dropna().unique())
 status_options = sorted(df["Development Status (short)"].dropna().unique())
 region_options = sorted(df["Region"].dropna().unique())
 
-with st.expander("Dashboard controls", expanded=False):
+with st.expander("Advanced filters", expanded=False):
     filter_col1, filter_col2, filter_col3 = st.columns(3)
 
     with filter_col1:
@@ -436,10 +480,10 @@ with st.expander("Dashboard controls", expanded=False):
         )
 
 # ---------------------------------------------------
-# APPLY FILTERS
+# APPLY SEARCH AND FILTERS
 # ---------------------------------------------------
 
-filtered_df = df.copy()
+filtered_df = apply_search(df.copy(), search_query)
 
 if selected_technology != "All":
     filtered_df = filtered_df[
@@ -457,7 +501,9 @@ if selected_region != "All":
     ]
 
 if filtered_df.empty:
-    st.warning("No projects match the selected filters.")
+    st.warning(
+        "No projects match the current search and filters. Try clearing the search or choosing All in the filters."
+    )
     st.stop()
 
 filtered_df["Screening Score"] = filtered_df.apply(
@@ -466,6 +512,9 @@ filtered_df["Screening Score"] = filtered_df.apply(
 )
 
 active_filters = []
+
+if search_query.strip():
+    active_filters.append(f"Search: {search_query.strip()}")
 
 if selected_technology != "All":
     active_filters.append(f"Technology: {selected_technology}")
@@ -477,9 +526,9 @@ if selected_region != "All":
     active_filters.append(f"Region: {selected_region}")
 
 if active_filters:
-    st.caption("Active filters · " + " · ".join(active_filters))
+    st.caption("Active view · " + " · ".join(active_filters))
 else:
-    st.caption("Active filters · All projects")
+    st.caption("Active view · All projects")
 
 # ---------------------------------------------------
 # SUMMARY VALUES
@@ -525,13 +574,13 @@ top_10_capacity = (
     .sum()
 )
 
-top_10_share = top_10_capacity / total_capacity * 100
+top_10_share = top_10_capacity / total_capacity * 100 if total_capacity else 0
 
 # ---------------------------------------------------
-# VISIBLE NAVIGATION
+# NAVIGATION
 # ---------------------------------------------------
 
-st.subheader("Choose a section")
+st.subheader("Explore")
 
 overview_tab, pipeline_tab, map_tab, briefs_tab, offshore_tab, methodology_tab = st.tabs(
     [
@@ -580,7 +629,7 @@ with overview_tab:
 
     st.write(
         f"""
-        The largest project under the current filters is **{largest_project_name}**
+        The largest project under the current view is **{largest_project_name}**
         at **{largest_project_capacity:,.0f} MW**.
         """
     )
@@ -817,7 +866,7 @@ with map_tab:
         fig_map.update_layout(
             mapbox_style="open-street-map",
             margin={"r": 0, "t": 0, "l": 0, "b": 0},
-            dragmode="zoom",
+            dragmode="pan",
         )
 
         st.plotly_chart(
@@ -1252,15 +1301,25 @@ with methodology_tab:
 
 st.divider()
 
-footer_left, footer_mid, footer_right = st.columns([1.3, 1, 1])
+footer_col1, footer_col2, footer_col3 = st.columns([1.2, 1, 1])
 
-with footer_left:
-    st.caption(
-        "Renewable Project Screening Studio · Engineering data portfolio project."
+with footer_col1:
+    st.markdown(
+        """
+        **HJ Nakamura**  
+        Mechanical Engineering, Imperial College London
+        """
     )
 
-with footer_mid:
-    st.caption("Python · Streamlit · pandas · Plotly · pyproj")
 
-with footer_right:
-    st.caption("HJ Nakamura · Imperial College London")
+with footer_col2:
+    st.markdown(
+        f"""
+        **Code**  
+        [GitHub repository]({GITHUB_URL})
+        """
+    )
+
+st.caption(
+    "Educational portfolio project only."
+)

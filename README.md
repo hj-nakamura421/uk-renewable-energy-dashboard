@@ -1,6 +1,18 @@
-# Renewable Project Screening Studio
+# UK Renewable Project Screening Dashboard
 
-A deployed Python and Streamlit web app for screening UK renewable energy infrastructure projects using public planning data.
+An interactive UK renewable energy dashboard built with Python and Streamlit for exploring renewable energy planning data, screening infrastructure projects, mapping project locations and modelling offshore wind feasibility.
+
+## Live App
+
+https://uk-renewable-project-screening.streamlit.app/
+
+## Project Summary
+
+This project turns public UK renewable energy planning data into an interactive project-screening dashboard. It allows users to search and filter projects, compare regional capacity, map renewable developments, generate project briefs and run simplified offshore wind feasibility calculations.
+
+## Keywords
+
+UK renewable energy dashboard, renewable project screening, renewable energy planning database, offshore wind feasibility model, renewable infrastructure dashboard.
 
 ## Live App
 
