@@ -162,7 +162,7 @@ fig1 = px.bar(
     title="Installed Capacity by Technology"
 )
 
-st.plotly_chart(fig1, use_container_width=True)
+st.plotly_chart(fig1, width="stretch")
 
 # ---------------------------------------------------
 # CAPACITY BY REGION
@@ -188,7 +188,7 @@ fig2 = px.bar(
     title="Installed Capacity by Region"
 )
 
-st.plotly_chart(fig2, use_container_width=True)
+st.plotly_chart(fig2, width="stretch")
 
 # ---------------------------------------------------
 # TOP 10 PROJECTS
