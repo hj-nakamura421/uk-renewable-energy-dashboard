@@ -7,4 +7,10 @@ wheels/
 *.egg-info
 
 # Virtual environments
-.venv
+.venv/
+
+# Mac system files
+.DS_Store
+
+# Environment variables
+.env
