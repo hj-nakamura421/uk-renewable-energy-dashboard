@@ -28,8 +28,8 @@ st.markdown(
     """
     <style>
     .block-container {
-        padding-top: 2.2rem;
-        padding-bottom: 4rem;
+        padding-top: 2rem;
+        padding-bottom: 3rem;
         max-width: 1180px;
     }
 
@@ -43,29 +43,29 @@ st.markdown(
     }
 
     h1 {
-        font-size: clamp(2.45rem, 4.4vw, 4.15rem);
-        line-height: 1.08;
-        font-weight: 700;
-        letter-spacing: -0.018em;
+        font-size: clamp(2.25rem, 4vw, 3.75rem);
+        line-height: 1.12;
+        font-weight: 680;
+        letter-spacing: 0.005em;
+        word-spacing: 0.08em;
         color: #111111;
-        margin-bottom: 0.95rem;
-        max-width: 1050px;
+        margin-bottom: 0.85rem;
+        max-width: 1100px;
     }
 
     h2 {
-        font-size: clamp(1.65rem, 2.5vw, 2.35rem);
-        line-height: 1.12;
-        font-weight: 680;
-        letter-spacing: -0.018em;
+        font-size: clamp(1.55rem, 2.4vw, 2.15rem);
+        line-height: 1.15;
+        font-weight: 670;
+        letter-spacing: -0.005em;
         color: #111111;
-        margin-top: 2.4rem;
-        margin-bottom: 1rem;
+        margin-top: 2.2rem;
+        margin-bottom: 0.95rem;
     }
 
     h3 {
-        font-size: 1.16rem;
-        font-weight: 620;
-        letter-spacing: -0.01em;
+        font-size: 1.13rem;
+        font-weight: 610;
         color: #111111;
     }
 
@@ -76,15 +76,15 @@ st.markdown(
     }
 
     .stMarkdown p {
-        max-width: 860px;
+        max-width: 900px;
     }
 
     [data-testid="stMetric"] {
         background: #FFFFFF;
         border: 1px solid #E7E7E2;
         padding: 1.05rem 1.15rem;
-        border-radius: 1.15rem;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.035);
+        border-radius: 1.05rem;
+        box-shadow: 0 10px 28px rgba(0, 0, 0, 0.035);
     }
 
     [data-testid="stMetricLabel"] {
@@ -95,9 +95,9 @@ st.markdown(
 
     [data-testid="stMetricValue"] {
         color: #111111;
-        font-size: 1.42rem;
-        font-weight: 660;
-        letter-spacing: -0.012em;
+        font-size: 1.36rem;
+        font-weight: 650;
+        letter-spacing: -0.005em;
     }
 
     div[data-testid="stDataFrame"] {
@@ -106,13 +106,24 @@ st.markdown(
         border: 1px solid #E7E7E2;
     }
 
-    .stDownloadButton button {
-        border-radius: 999px;
-        background-color: #111111;
-        color: white;
-        border: 1px solid #111111;
-        font-weight: 650;
-        padding: 0.55rem 1.25rem;
+    /* Download button fix */
+    div[data-testid="stDownloadButton"] button {
+        border-radius: 999px !important;
+        background-color: #111111 !important;
+        color: #FFFFFF !important;
+        border: 1px solid #111111 !important;
+        font-weight: 650 !important;
+        padding: 0.55rem 1.25rem !important;
+    }
+
+    div[data-testid="stDownloadButton"] button * {
+        color: #FFFFFF !important;
+    }
+
+    div[data-testid="stDownloadButton"] button:hover {
+        background-color: #303030 !important;
+        border-color: #303030 !important;
+        color: #FFFFFF !important;
     }
 
     .stAlert {
@@ -120,18 +131,59 @@ st.markdown(
         border: 1px solid #E7E7E2;
     }
 
-    button[data-baseweb="tab"] {
-        font-size: 0.94rem;
-        font-weight: 620;
-        color: #777777;
-    }
-
-    button[data-baseweb="tab"][aria-selected="true"] {
-        color: #111111;
-    }
-
     section[data-testid="stSidebar"] {
         display: none;
+    }
+
+    /* Make Streamlit tabs look like an obvious navigation bar */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 0.4rem;
+        background: #FFFFFF;
+        border: 1px solid #E7E7E2;
+        border-radius: 999px;
+        padding: 0.35rem;
+        box-shadow: 0 10px 28px rgba(0, 0, 0, 0.035);
+        margin-top: 1rem;
+        margin-bottom: 1.5rem;
+        flex-wrap: wrap;
+    }
+
+    .stTabs [data-baseweb="tab"] {
+        height: 2.7rem;
+        border-radius: 999px;
+        padding: 0.45rem 0.9rem;
+        font-size: 0.94rem;
+        font-weight: 640;
+        color: #555555;
+        background: transparent;
+    }
+
+    .stTabs [data-baseweb="tab"][aria-selected="true"] {
+        background: #111111;
+        color: #FFFFFF;
+    }
+
+    .stTabs [data-baseweb="tab"][aria-selected="true"] p {
+        color: #FFFFFF;
+    }
+
+    .stTabs [data-baseweb="tab-highlight"] {
+        display: none;
+    }
+
+    .stTabs [data-baseweb="tab-border"] {
+        display: none;
+    }
+
+    /* Expander polish */
+    details {
+        border-radius: 1rem !important;
+    }
+
+    @media (max-width: 800px) {
+        h1 {
+            word-spacing: 0.03em;
+        }
     }
     </style>
     """,
@@ -260,6 +312,7 @@ def polish_chart(fig, height=420):
         title=None,
         margin=dict(l=20, r=20, t=30, b=20),
         showlegend=True,
+        hovermode="closest",
     )
 
     fig.update_xaxes(
@@ -291,6 +344,15 @@ def top_capacity_table(
     )
 
 
+def safe_filename(name: str) -> str:
+    return (
+        name.replace("/", "-")
+        .replace("\\", "-")
+        .replace(" ", "_")
+        .replace(":", "-")
+    )
+
+
 # ---------------------------------------------------
 # LOAD DATA
 # ---------------------------------------------------
@@ -306,17 +368,37 @@ except Exception as e:
 # HEADER
 # ---------------------------------------------------
 
+top_left, top_right = st.columns([1.5, 1])
+
+with top_left:
+    st.caption("Renewable infrastructure intelligence")
+
+with top_right:
+    st.caption("Portfolio project · UK planning data · Python/Streamlit")
+
 st.title("Renewable Project Screening Studio")
 
 st.write(
     """
-    A clean project-screening dashboard for UK renewable energy infrastructure.
-    Explore project pipelines, compare capacity, map developments, generate project briefs,
-    and test simplified offshore wind feasibility assumptions.
+    A project-screening dashboard for UK renewable energy infrastructure.
+    Use the controls, move through the sections, and generate quick project briefs or offshore wind estimates.
     """
 )
 
-st.caption("Python · Streamlit · pandas · Plotly · pyproj")
+# ---------------------------------------------------
+# QUICK GUIDE
+# ---------------------------------------------------
+
+guide_col1, guide_col2, guide_col3 = st.columns(3)
+
+with guide_col1:
+    st.info("**1. Filter** projects by technology, stage or region.")
+
+with guide_col2:
+    st.info("**2. Explore** the overview, pipeline and map sections.")
+
+with guide_col3:
+    st.info("**3. Generate** a project brief or offshore wind estimate.")
 
 # ---------------------------------------------------
 # FILTERS
@@ -334,6 +416,7 @@ with st.expander("Dashboard controls", expanded=False):
             "Technology",
             ["All"] + technology_options,
             index=0,
+            help="Choose one technology, or leave as All.",
         )
 
     with filter_col2:
@@ -341,6 +424,7 @@ with st.expander("Dashboard controls", expanded=False):
             "Development stage",
             ["All"] + status_options,
             index=0,
+            help="Choose one project stage, or leave as All.",
         )
 
     with filter_col3:
@@ -348,6 +432,7 @@ with st.expander("Dashboard controls", expanded=False):
             "Region",
             ["All"] + region_options,
             index=0,
+            help="Choose one UK region, or leave as All.",
         )
 
 # ---------------------------------------------------
@@ -379,6 +464,22 @@ filtered_df["Screening Score"] = filtered_df.apply(
     calculate_screening_score,
     axis=1,
 )
+
+active_filters = []
+
+if selected_technology != "All":
+    active_filters.append(f"Technology: {selected_technology}")
+
+if selected_status != "All":
+    active_filters.append(f"Stage: {selected_status}")
+
+if selected_region != "All":
+    active_filters.append(f"Region: {selected_region}")
+
+if active_filters:
+    st.caption("Active filters · " + " · ".join(active_filters))
+else:
+    st.caption("Active filters · All projects")
 
 # ---------------------------------------------------
 # SUMMARY VALUES
@@ -427,8 +528,10 @@ top_10_capacity = (
 top_10_share = top_10_capacity / total_capacity * 100
 
 # ---------------------------------------------------
-# TABS
+# VISIBLE NAVIGATION
 # ---------------------------------------------------
+
+st.subheader("Choose a section")
 
 overview_tab, pipeline_tab, map_tab, briefs_tab, offshore_tab, methodology_tab = st.tabs(
     [
@@ -482,55 +585,59 @@ with overview_tab:
         """
     )
 
-    st.subheader("Top technologies")
+    chart_col1, chart_col2 = st.columns(2)
 
-    tech_capacity = top_capacity_table(filtered_df, "Technology Type", n=8)
-    tech_capacity = tech_capacity.sort_values(
-        "Installed Capacity (MWelec)",
-        ascending=True,
-    )
+    with chart_col1:
+        st.subheader("Top technologies")
 
-    fig_tech = px.bar(
-        tech_capacity,
-        x="Installed Capacity (MWelec)",
-        y="Technology Type",
-        orientation="h",
-        labels={
-            "Installed Capacity (MWelec)": "Capacity (MW)",
-            "Technology Type": "",
-        },
-    )
+        tech_capacity = top_capacity_table(filtered_df, "Technology Type", n=8)
+        tech_capacity = tech_capacity.sort_values(
+            "Installed Capacity (MWelec)",
+            ascending=True,
+        )
 
-    st.plotly_chart(
-        polish_chart(fig_tech, height=380),
-        width="stretch",
-        config={"displayModeBar": False},
-    )
+        fig_tech = px.bar(
+            tech_capacity,
+            x="Installed Capacity (MWelec)",
+            y="Technology Type",
+            orientation="h",
+            labels={
+                "Installed Capacity (MWelec)": "Capacity (MW)",
+                "Technology Type": "",
+            },
+        )
 
-    st.subheader("Top regions")
+        st.plotly_chart(
+            polish_chart(fig_tech, height=390),
+            use_container_width=True,
+            config={"displayModeBar": False},
+        )
 
-    region_capacity = top_capacity_table(filtered_df, "Region", n=8)
-    region_capacity = region_capacity.sort_values(
-        "Installed Capacity (MWelec)",
-        ascending=True,
-    )
+    with chart_col2:
+        st.subheader("Top regions")
 
-    fig_region = px.bar(
-        region_capacity,
-        x="Installed Capacity (MWelec)",
-        y="Region",
-        orientation="h",
-        labels={
-            "Installed Capacity (MWelec)": "Capacity (MW)",
-            "Region": "",
-        },
-    )
+        region_capacity = top_capacity_table(filtered_df, "Region", n=8)
+        region_capacity = region_capacity.sort_values(
+            "Installed Capacity (MWelec)",
+            ascending=True,
+        )
 
-    st.plotly_chart(
-        polish_chart(fig_region, height=380),
-        width="stretch",
-        config={"displayModeBar": False},
-    )
+        fig_region = px.bar(
+            region_capacity,
+            x="Installed Capacity (MWelec)",
+            y="Region",
+            orientation="h",
+            labels={
+                "Installed Capacity (MWelec)": "Capacity (MW)",
+                "Region": "",
+            },
+        )
+
+        st.plotly_chart(
+            polish_chart(fig_region, height=390),
+            use_container_width=True,
+            config={"displayModeBar": False},
+        )
 
 # ---------------------------------------------------
 # PIPELINE
@@ -564,7 +671,7 @@ with pipeline_tab:
 
     st.dataframe(
         filtered_df[available_display_columns].head(250),
-        width="stretch",
+        use_container_width=True,
     )
 
     st.caption(
@@ -600,75 +707,79 @@ with pipeline_tab:
         .head(10)
     )
 
-    st.dataframe(top_projects, width="stretch")
+    st.dataframe(top_projects, use_container_width=True)
 
-    st.subheader("Capacity by development stage")
+    chart_col1, chart_col2 = st.columns(2)
 
-    status_capacity = top_capacity_table(
-        filtered_df,
-        "Development Status (short)",
-        n=10,
-    )
+    with chart_col1:
+        st.subheader("Capacity by stage")
 
-    status_capacity = status_capacity.sort_values(
-        "Installed Capacity (MWelec)",
-        ascending=True,
-    )
+        status_capacity = top_capacity_table(
+            filtered_df,
+            "Development Status (short)",
+            n=10,
+        )
 
-    fig_status = px.bar(
-        status_capacity,
-        x="Installed Capacity (MWelec)",
-        y="Development Status (short)",
-        orientation="h",
-        labels={
-            "Installed Capacity (MWelec)": "Capacity (MW)",
-            "Development Status (short)": "",
-        },
-    )
+        status_capacity = status_capacity.sort_values(
+            "Installed Capacity (MWelec)",
+            ascending=True,
+        )
 
-    st.plotly_chart(
-        polish_chart(fig_status, height=420),
-        width="stretch",
-        config={"displayModeBar": False},
-    )
+        fig_status = px.bar(
+            status_capacity,
+            x="Installed Capacity (MWelec)",
+            y="Development Status (short)",
+            orientation="h",
+            labels={
+                "Installed Capacity (MWelec)": "Capacity (MW)",
+                "Development Status (short)": "",
+            },
+        )
 
-    st.subheader("Technology by development stage")
+        st.plotly_chart(
+            polish_chart(fig_status, height=420),
+            use_container_width=True,
+            config={"displayModeBar": False},
+        )
 
-    top_technology_list = (
-        filtered_df.groupby("Technology Type")["Installed Capacity (MWelec)"]
-        .sum()
-        .sort_values(ascending=False)
-        .head(6)
-        .index
-        .tolist()
-    )
+    with chart_col2:
+        st.subheader("Technology by stage")
 
-    pipeline_matrix = (
-        filtered_df[filtered_df["Technology Type"].isin(top_technology_list)]
-        .groupby(["Technology Type", "Development Status (short)"])
-        ["Installed Capacity (MWelec)"]
-        .sum()
-        .reset_index()
-    )
+        top_technology_list = (
+            filtered_df.groupby("Technology Type")["Installed Capacity (MWelec)"]
+            .sum()
+            .sort_values(ascending=False)
+            .head(6)
+            .index
+            .tolist()
+        )
 
-    fig_pipeline = px.bar(
-        pipeline_matrix,
-        x="Installed Capacity (MWelec)",
-        y="Technology Type",
-        color="Development Status (short)",
-        orientation="h",
-        labels={
-            "Installed Capacity (MWelec)": "Capacity (MW)",
-            "Technology Type": "",
-            "Development Status (short)": "Stage",
-        },
-    )
+        pipeline_matrix = (
+            filtered_df[filtered_df["Technology Type"].isin(top_technology_list)]
+            .groupby(["Technology Type", "Development Status (short)"])
+            ["Installed Capacity (MWelec)"]
+            .sum()
+            .reset_index()
+        )
 
-    st.plotly_chart(
-        polish_chart(fig_pipeline, height=430),
-        width="stretch",
-        config={"displayModeBar": False},
-    )
+        fig_pipeline = px.bar(
+            pipeline_matrix,
+            x="Installed Capacity (MWelec)",
+            y="Technology Type",
+            color="Development Status (short)",
+            orientation="h",
+            labels={
+                "Installed Capacity (MWelec)": "Capacity (MW)",
+                "Technology Type": "",
+                "Development Status (short)": "Stage",
+            },
+        )
+
+        st.plotly_chart(
+            polish_chart(fig_pipeline, height=420),
+            use_container_width=True,
+            config={"displayModeBar": False},
+        )
 
 # ---------------------------------------------------
 # MAP
@@ -676,6 +787,8 @@ with pipeline_tab:
 
 with map_tab:
     st.header("Map")
+
+    st.write("Use your mouse wheel or trackpad to zoom. Drag the map to move around.")
 
     map_df = filtered_df.dropna(subset=["Latitude", "Longitude"]).copy()
 
@@ -698,18 +811,27 @@ with map_tab:
                 "Screening Score",
             ],
             zoom=4,
-            height=650,
+            height=680,
         )
 
         fig_map.update_layout(
             mapbox_style="open-street-map",
             margin={"r": 0, "t": 0, "l": 0, "b": 0},
+            dragmode="zoom",
         )
 
         st.plotly_chart(
             fig_map,
-            width="stretch",
-            config={"displayModeBar": False},
+            use_container_width=True,
+            config={
+                "scrollZoom": True,
+                "displayModeBar": True,
+                "displaylogo": False,
+                "modeBarButtonsToRemove": [
+                    "lasso2d",
+                    "select2d",
+                ],
+            },
         )
 
 # ---------------------------------------------------
@@ -816,7 +938,7 @@ with briefs_tab:
                     "Screening Score",
                 ]
             ],
-            width="stretch",
+            use_container_width=True,
         )
 
     report_text = f"""
@@ -856,17 +978,10 @@ technology type and data completeness.
 Generated using the Renewable Project Screening Studio.
 """
 
-    safe_project_name = (
-        selected_report_project
-        .replace("/", "-")
-        .replace("\\", "-")
-        .replace(" ", "_")
-    )
-
     st.download_button(
         label="Download project brief",
         data=report_text,
-        file_name=f"{safe_project_name}_project_brief.txt",
+        file_name=f"{safe_filename(selected_report_project)}_project_brief.txt",
         mime="text/plain",
     )
 
@@ -1055,7 +1170,7 @@ with offshore_tab:
 
         sensitivity_df = pd.DataFrame(sensitivity_rows)
 
-        st.dataframe(sensitivity_df, width="stretch")
+        st.dataframe(sensitivity_df, use_container_width=True)
 
         fig_sensitivity = px.line(
             sensitivity_df,
@@ -1066,7 +1181,7 @@ with offshore_tab:
 
         st.plotly_chart(
             polish_chart(fig_sensitivity, height=380),
-            width="stretch",
+            use_container_width=True,
             config={"displayModeBar": False},
         )
 
@@ -1130,3 +1245,22 @@ with methodology_tab:
         costs or planning-risk modelling.
         """
     )
+
+# ---------------------------------------------------
+# FOOTER
+# ---------------------------------------------------
+
+st.divider()
+
+footer_left, footer_mid, footer_right = st.columns([1.3, 1, 1])
+
+with footer_left:
+    st.caption(
+        "Renewable Project Screening Studio · Engineering data portfolio project."
+    )
+
+with footer_mid:
+    st.caption("Python · Streamlit · pandas · Plotly · pyproj")
+
+with footer_right:
+    st.caption("HJ Nakamura · Imperial College London")
