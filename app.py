@@ -1,4 +1,3 @@
-import base64
 from pathlib import Path
 
 import pandas as pd
@@ -20,22 +19,18 @@ st.set_page_config(
 # ---------------------------------------------------
 
 DATA_PATH = Path("data/renewable_projects.csv")
-HERO_IMAGE_PATH = Path("assets/hero.jpg")
-DEMO_VIDEO_PATH = Path("assets/demo.mp4")
 
 # ---------------------------------------------------
-# PREMIUM DASHBOARD CSS
+# CSS
 # ---------------------------------------------------
 
 st.markdown(
     """
     <style>
-    /* ---------- App shell ---------- */
-
     .block-container {
-        padding-top: 1.2rem;
+        padding-top: 2.2rem;
         padding-bottom: 4rem;
-        max-width: 1220px;
+        max-width: 1180px;
     }
 
     #MainMenu, footer, header {
@@ -44,38 +39,34 @@ st.markdown(
 
     html, body, [class*="css"] {
         font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display",
-                     "Inter", "Segoe UI", sans-serif;
-    }
-
-    body {
-        background-color: #F5F5F2;
-    }
-
-    h1, h2, h3 {
-        color: #111111;
-        letter-spacing: -0.045em;
+                     "SF Pro Text", "Inter", "Segoe UI", sans-serif;
     }
 
     h1 {
-        font-size: clamp(2.4rem, 4.8vw, 4.3rem);
-        line-height: 1;
-        font-weight: 760;
-        margin-bottom: 0.65rem;
-        white-space: nowrap;
+        font-size: clamp(2.45rem, 4.4vw, 4.15rem);
+        line-height: 1.08;
+        font-weight: 700;
+        letter-spacing: -0.018em;
+        color: #111111;
+        margin-bottom: 0.95rem;
+        max-width: 1050px;
     }
 
     h2 {
-        font-size: clamp(1.8rem, 3vw, 2.7rem);
-        line-height: 1.05;
-        font-weight: 720;
-        margin-top: 2.5rem;
+        font-size: clamp(1.65rem, 2.5vw, 2.35rem);
+        line-height: 1.12;
+        font-weight: 680;
+        letter-spacing: -0.018em;
+        color: #111111;
+        margin-top: 2.4rem;
         margin-bottom: 1rem;
     }
 
     h3 {
-        font-size: 1.18rem;
-        font-weight: 660;
-        margin-top: 1.45rem;
+        font-size: 1.16rem;
+        font-weight: 620;
+        letter-spacing: -0.01em;
+        color: #111111;
     }
 
     p, li {
@@ -84,168 +75,16 @@ st.markdown(
         line-height: 1.62;
     }
 
-    /* ---------- Compact hero ---------- */
-
-    .topbar {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 1.1rem;
-        color: #6E6E73;
-        font-size: 0.88rem;
+    .stMarkdown p {
+        max-width: 860px;
     }
-
-    .brand-lockup {
-        font-weight: 720;
-        color: #111111;
-        letter-spacing: -0.02em;
-    }
-
-    .topbar-meta {
-        display: flex;
-        gap: 0.75rem;
-        flex-wrap: wrap;
-        justify-content: flex-end;
-    }
-
-    .topbar-pill {
-        border: 1px solid #E5E5E0;
-        background: rgba(255, 255, 255, 0.78);
-        padding: 0.4rem 0.7rem;
-        border-radius: 999px;
-        color: #4B5563;
-    }
-
-    .hero {
-        min-height: 430px;
-        border-radius: 2.1rem;
-        margin-bottom: 1.45rem;
-        padding: 3.2rem;
-        display: flex;
-        align-items: flex-end;
-        background-size: cover;
-        background-position: center;
-        position: relative;
-        overflow: hidden;
-        box-shadow: 0 24px 70px rgba(0, 0, 0, 0.15);
-    }
-
-    .hero-content {
-        max-width: 960px;
-        z-index: 2;
-    }
-
-    .eyebrow {
-        color: rgba(255, 255, 255, 0.78);
-        font-size: 0.76rem;
-        font-weight: 760;
-        letter-spacing: 0.18em;
-        text-transform: uppercase;
-        margin-bottom: 1rem;
-    }
-
-    .hero-title {
-        color: white;
-        font-size: clamp(2.55rem, 5vw, 5rem);
-        line-height: 0.96;
-        letter-spacing: -0.075em;
-        font-weight: 780;
-        margin-bottom: 1rem;
-        white-space: nowrap;
-    }
-
-    .hero-subtitle {
-        color: rgba(255, 255, 255, 0.88);
-        font-size: clamp(1rem, 1.45vw, 1.25rem);
-        line-height: 1.5;
-        max-width: 760px;
-        margin-bottom: 1.25rem;
-    }
-
-    .hero-meta {
-        display: inline-flex;
-        gap: 0.55rem;
-        flex-wrap: wrap;
-    }
-
-    .hero-pill {
-        color: white;
-        background: rgba(255, 255, 255, 0.14);
-        border: 1px solid rgba(255, 255, 255, 0.24);
-        border-radius: 999px;
-        padding: 0.48rem 0.75rem;
-        font-size: 0.8rem;
-        backdrop-filter: blur(16px);
-    }
-
-    /* ---------- Capability strip ---------- */
-
-    .capability-grid {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 0.85rem;
-        margin-top: 0.9rem;
-        margin-bottom: 1.6rem;
-    }
-
-    .capability-card {
-        background: #FFFFFF;
-        border: 1px solid #E7E7E2;
-        border-radius: 1.35rem;
-        padding: 1.15rem 1.25rem;
-        min-height: 118px;
-        box-shadow: 0 14px 38px rgba(0, 0, 0, 0.04);
-    }
-
-    .capability-number {
-        color: #A18F69;
-        font-size: 0.74rem;
-        font-weight: 760;
-        letter-spacing: 0.14em;
-        text-transform: uppercase;
-        margin-bottom: 0.78rem;
-    }
-
-    .capability-title {
-        color: #111111;
-        font-size: 1.25rem;
-        font-weight: 730;
-        letter-spacing: -0.035em;
-        margin-bottom: 0.35rem;
-    }
-
-    .capability-text {
-        color: #60636A;
-        font-size: 0.94rem;
-        line-height: 1.48;
-    }
-
-    /* ---------- Filter drawer ---------- */
-
-    details {
-        background: #FFFFFF;
-        border: 1px solid #E7E7E2;
-        border-radius: 1.35rem;
-        padding: 0.75rem 1rem;
-        box-shadow: 0 14px 38px rgba(0, 0, 0, 0.035);
-        margin-bottom: 1.35rem;
-    }
-
-    summary {
-        cursor: pointer;
-        font-weight: 700;
-        color: #111111;
-        letter-spacing: -0.025em;
-    }
-
-    /* ---------- Metrics ---------- */
 
     [data-testid="stMetric"] {
         background: #FFFFFF;
         border: 1px solid #E7E7E2;
-        padding: 1.15rem 1.25rem;
-        border-radius: 1.25rem;
-        box-shadow: 0 14px 38px rgba(0, 0, 0, 0.04);
+        padding: 1.05rem 1.15rem;
+        border-radius: 1.15rem;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.035);
     }
 
     [data-testid="stMetricLabel"] {
@@ -256,26 +95,10 @@ st.markdown(
 
     [data-testid="stMetricValue"] {
         color: #111111;
-        font-size: 1.55rem;
-        font-weight: 730;
-        letter-spacing: -0.035em;
+        font-size: 1.42rem;
+        font-weight: 660;
+        letter-spacing: -0.012em;
     }
-
-    /* ---------- Tabs ---------- */
-
-    button[data-baseweb="tab"] {
-        font-size: 0.94rem;
-        font-weight: 630;
-        color: #777777;
-        padding-top: 0.7rem;
-        padding-bottom: 0.7rem;
-    }
-
-    button[data-baseweb="tab"][aria-selected="true"] {
-        color: #111111;
-    }
-
-    /* ---------- Tables / buttons / sidebar ---------- */
 
     div[data-testid="stDataFrame"] {
         border-radius: 1rem;
@@ -297,39 +120,18 @@ st.markdown(
         border: 1px solid #E7E7E2;
     }
 
-    section[data-testid="stSidebar"] {
-        display: none;
+    button[data-baseweb="tab"] {
+        font-size: 0.94rem;
+        font-weight: 620;
+        color: #777777;
     }
 
-    /* ---------- Mobile ---------- */
+    button[data-baseweb="tab"][aria-selected="true"] {
+        color: #111111;
+    }
 
-    @media (max-width: 900px) {
-        h1 {
-            white-space: normal;
-        }
-
-        .hero {
-            padding: 2.2rem 1.5rem;
-            min-height: 420px;
-        }
-
-        .hero-title {
-            white-space: normal;
-        }
-
-        .capability-grid {
-            grid-template-columns: 1fr;
-        }
-
-        .topbar {
-            align-items: flex-start;
-            flex-direction: column;
-            gap: 0.7rem;
-        }
-
-        .topbar-meta {
-            justify-content: flex-start;
-        }
+    section[data-testid="stSidebar"] {
+        display: none;
     }
     </style>
     """,
@@ -337,24 +139,12 @@ st.markdown(
 )
 
 # ---------------------------------------------------
-# HELPER FUNCTIONS
+# FUNCTIONS
 # ---------------------------------------------------
-
-
-def image_to_base64(image_path: Path) -> str | None:
-    """Convert a local image file to base64 for use in the hero background."""
-
-    if not image_path.exists():
-        return None
-
-    with open(image_path, "rb") as image_file:
-        return base64.b64encode(image_file.read()).decode()
 
 
 @st.cache_data
 def load_data() -> pd.DataFrame:
-    """Load and clean the renewable energy dataset."""
-
     data = pd.read_csv(DATA_PATH, encoding="latin1")
 
     data["Installed Capacity (MWelec)"] = pd.to_numeric(
@@ -400,8 +190,6 @@ def load_data() -> pd.DataFrame:
 
 
 def calculate_screening_score(row: pd.Series) -> int:
-    """Calculate a simple renewable project screening score out of 100."""
-
     score = 0
 
     capacity = row.get("Installed Capacity (MWelec)", 0)
@@ -459,32 +247,48 @@ def calculate_screening_score(row: pd.Series) -> int:
     return min(score, 100)
 
 
-def polish_chart(fig):
-    """Apply a cleaner dashboard style to Plotly charts."""
-
+def polish_chart(fig, height=420):
     fig.update_layout(
         template="plotly_white",
+        height=height,
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="#FFFFFF",
         font=dict(
             family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif",
             color="#111111",
         ),
-        title=dict(
-            font=dict(size=20, color="#111111"),
-            x=0,
-        ),
-        margin=dict(l=20, r=20, t=60, b=20),
-        legend=dict(
-            orientation="h",
-            yanchor="bottom",
-            y=1.02,
-            xanchor="right",
-            x=1,
-        ),
+        title=None,
+        margin=dict(l=20, r=20, t=30, b=20),
+        showlegend=True,
+    )
+
+    fig.update_xaxes(
+        showgrid=True,
+        gridcolor="#EFEFEA",
+        zeroline=False,
+    )
+
+    fig.update_yaxes(
+        showgrid=False,
+        zeroline=False,
     )
 
     return fig
+
+
+def top_capacity_table(
+    data: pd.DataFrame,
+    group_col: str,
+    value_col: str = "Installed Capacity (MWelec)",
+    n: int = 10,
+) -> pd.DataFrame:
+    return (
+        data.groupby(group_col)[value_col]
+        .sum()
+        .reset_index()
+        .sort_values(value_col, ascending=False)
+        .head(n)
+    )
 
 
 # ---------------------------------------------------
@@ -493,153 +297,82 @@ def polish_chart(fig):
 
 try:
     df = load_data()
-
 except Exception as e:
     st.error("Error loading dataset.")
     st.code(str(e))
     st.stop()
 
 # ---------------------------------------------------
-# PREMIUM HEADER
+# HEADER
 # ---------------------------------------------------
 
-hero_image = image_to_base64(HERO_IMAGE_PATH)
+st.title("Renewable Project Screening Studio")
 
-if hero_image:
-    hero_background = (
-        "linear-gradient(90deg, rgba(0,0,0,0.82) 0%, "
-        "rgba(0,0,0,0.52) 42%, rgba(0,0,0,0.12) 100%), "
-        f"url('data:image/jpeg;base64,{hero_image}')"
-    )
-else:
-    hero_background = "linear-gradient(135deg, #050505 0%, #242424 48%, #87785D 100%)"
-
-st.markdown(
+st.write(
     """
-    <div class="topbar">
-        <div class="brand-lockup">Renewable Project Screening Studio</div>
-        <div class="topbar-meta">
-            <span class="topbar-pill">Portfolio project</span>
-            <span class="topbar-pill">UK planning data</span>
-            <span class="topbar-pill">Python · Streamlit</span>
-        </div>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
-
-st.markdown(
-    f"""
-    <section class="hero" style="background-image: {hero_background};">
-        <div class="hero-content">
-            <div class="eyebrow">Renewable infrastructure intelligence</div>
-            <div class="hero-title">Renewable Project Screening Studio</div>
-            <div class="hero-subtitle">
-                A clean portfolio-grade dashboard for exploring UK renewable project pipelines,
-                mapping developments, generating project briefs and testing simplified offshore
-                wind feasibility assumptions.
-            </div>
-            <div class="hero-meta">
-                <span class="hero-pill">Screen projects</span>
-                <span class="hero-pill">Compare pipeline capacity</span>
-                <span class="hero-pill">Map developments</span>
-                <span class="hero-pill">Model offshore wind</span>
-            </div>
-        </div>
-    </section>
-    """,
-    unsafe_allow_html=True,
-)
-
-st.markdown(
+    A clean project-screening dashboard for UK renewable energy infrastructure.
+    Explore project pipelines, compare capacity, map developments, generate project briefs,
+    and test simplified offshore wind feasibility assumptions.
     """
-    <div class="capability-grid">
-        <div class="capability-card">
-            <div class="capability-number">01</div>
-            <div class="capability-title">Screen</div>
-            <div class="capability-text">
-                Filter renewable infrastructure projects by technology, development stage and region.
-            </div>
-        </div>
-        <div class="capability-card">
-            <div class="capability-number">02</div>
-            <div class="capability-title">Compare</div>
-            <div class="capability-text">
-                Analyse capacity pipelines, regional concentration and major project clusters.
-            </div>
-        </div>
-        <div class="capability-card">
-            <div class="capability-number">03</div>
-            <div class="capability-title">Model</div>
-            <div class="capability-text">
-                Estimate offshore wind generation, CAPEX, payback and carbon impact.
-            </div>
-        </div>
-    </div>
-    """,
-    unsafe_allow_html=True,
 )
 
-if DEMO_VIDEO_PATH.exists():
-    with st.expander("Watch short project walkthrough"):
-        st.video(str(DEMO_VIDEO_PATH))
+st.caption("Python · Streamlit · pandas · Plotly · pyproj")
 
 # ---------------------------------------------------
-# COMPACT FILTER DRAWER
+# FILTERS
 # ---------------------------------------------------
 
 technology_options = sorted(df["Technology Type"].dropna().unique())
 status_options = sorted(df["Development Status (short)"].dropna().unique())
 region_options = sorted(df["Region"].dropna().unique())
 
-with st.expander("Refine project universe", expanded=False):
+with st.expander("Dashboard controls", expanded=False):
     filter_col1, filter_col2, filter_col3 = st.columns(3)
 
     with filter_col1:
-        selected_technology = st.multiselect(
+        selected_technology = st.selectbox(
             "Technology",
-            technology_options,
-            default=technology_options,
+            ["All"] + technology_options,
+            index=0,
         )
 
     with filter_col2:
-        selected_status = st.multiselect(
+        selected_status = st.selectbox(
             "Development stage",
-            status_options,
-            default=status_options,
+            ["All"] + status_options,
+            index=0,
         )
 
     with filter_col3:
-        selected_region = st.multiselect(
+        selected_region = st.selectbox(
             "Region",
-            region_options,
-            default=region_options,
+            ["All"] + region_options,
+            index=0,
         )
-
-    st.caption(
-        "Filters are collapsed by default to keep the dashboard clean. "
-        "Leaving a filter empty is treated as selecting all options."
-    )
-
-technology_filter = selected_technology or technology_options
-status_filter = selected_status or status_options
-region_filter = selected_region or region_options
 
 # ---------------------------------------------------
 # APPLY FILTERS
 # ---------------------------------------------------
 
-filtered_df = df[
-    (df["Technology Type"].isin(technology_filter))
-    & (df["Development Status (short)"].isin(status_filter))
-    & (df["Region"].isin(region_filter))
-].copy()
+filtered_df = df.copy()
+
+if selected_technology != "All":
+    filtered_df = filtered_df[
+        filtered_df["Technology Type"] == selected_technology
+    ]
+
+if selected_status != "All":
+    filtered_df = filtered_df[
+        filtered_df["Development Status (short)"] == selected_status
+    ]
+
+if selected_region != "All":
+    filtered_df = filtered_df[
+        filtered_df["Region"] == selected_region
+    ]
 
 if filtered_df.empty:
-    st.warning(
-        "No projects match the current filters. "
-        "Try selecting more technologies, regions or development statuses."
-    )
+    st.warning("No projects match the selected filters.")
     st.stop()
 
 filtered_df["Screening Score"] = filtered_df.apply(
@@ -648,7 +381,7 @@ filtered_df["Screening Score"] = filtered_df.apply(
 )
 
 # ---------------------------------------------------
-# SHARED SUMMARY VALUES
+# SUMMARY VALUES
 # ---------------------------------------------------
 
 total_capacity = filtered_df["Installed Capacity (MWelec)"].sum()
@@ -662,142 +395,153 @@ if "Record Last Updated Parsed" in filtered_df.columns:
     if pd.notna(latest_update):
         latest_update_text = latest_update.strftime("%d %b %Y")
 
+largest_project_row = filtered_df.sort_values(
+    "Installed Capacity (MWelec)",
+    ascending=False,
+).iloc[0]
+
+largest_project_name = largest_project_row["Site Name"]
+largest_project_capacity = largest_project_row["Installed Capacity (MWelec)"]
+
+largest_tech = (
+    filtered_df.groupby("Technology Type")["Installed Capacity (MWelec)"]
+    .sum()
+    .idxmax()
+)
+
+largest_region = (
+    filtered_df.groupby("Region")["Installed Capacity (MWelec)"]
+    .sum()
+    .idxmax()
+)
+
+top_10_capacity = (
+    filtered_df.sort_values(
+        "Installed Capacity (MWelec)",
+        ascending=False,
+    )
+    .head(10)["Installed Capacity (MWelec)"]
+    .sum()
+)
+
+top_10_share = top_10_capacity / total_capacity * 100
+
 # ---------------------------------------------------
 # TABS
 # ---------------------------------------------------
 
-overview_tab, explorer_tab, map_tab, report_tab, offshore_tab, methodology_tab = st.tabs(
+overview_tab, pipeline_tab, map_tab, briefs_tab, offshore_tab, methodology_tab = st.tabs(
     [
-        "Portfolio Overview",
-        "Project Pipeline",
-        "Geographic View",
-        "Project Briefs",
-        "Offshore Wind Model",
+        "Overview",
+        "Pipeline",
+        "Map",
+        "Briefs",
+        "Offshore Model",
         "Methodology",
     ]
 )
 
 # ---------------------------------------------------
-# PORTFOLIO OVERVIEW TAB
+# OVERVIEW
 # ---------------------------------------------------
 
 with overview_tab:
-    st.header("Portfolio Overview")
+    st.header("Overview")
 
-    col1, col2, col3, col4 = st.columns(4)
+    metric_col1, metric_col2, metric_col3, metric_col4 = st.columns(4)
 
-    with col1:
+    with metric_col1:
         st.metric("Projects", f"{len(filtered_df):,}")
 
-    with col2:
+    with metric_col2:
         st.metric("Total Capacity", f"{total_capacity:,.0f} MW")
 
-    with col3:
+    with metric_col3:
         st.metric("Average Capacity", f"{avg_capacity:,.1f} MW")
 
-    with col4:
+    with metric_col4:
         st.metric("Latest Update", latest_update_text)
 
-    st.subheader("Executive Summary")
+    st.subheader("Key insights")
 
-    largest_tech = (
-        filtered_df
-        .groupby("Technology Type")["Installed Capacity (MWelec)"]
-        .sum()
-        .idxmax()
-    )
+    insight_col1, insight_col2, insight_col3 = st.columns(3)
 
-    largest_region = (
-        filtered_df
-        .groupby("Region")["Installed Capacity (MWelec)"]
-        .sum()
-        .idxmax()
-    )
+    with insight_col1:
+        st.metric("Leading technology", largest_tech)
 
-    largest_project_row = filtered_df.sort_values(
-        "Installed Capacity (MWelec)",
-        ascending=False,
-    ).iloc[0]
+    with insight_col2:
+        st.metric("Leading region", largest_region)
 
-    largest_project_name = largest_project_row["Site Name"]
-    largest_project_capacity = largest_project_row["Installed Capacity (MWelec)"]
+    with insight_col3:
+        st.metric("Top 10 share", f"{top_10_share:,.1f}%")
 
-    top_10_capacity = (
-        filtered_df
-        .sort_values("Installed Capacity (MWelec)", ascending=False)
-        .head(10)["Installed Capacity (MWelec)"]
-        .sum()
-    )
-
-    top_10_share = top_10_capacity / total_capacity * 100
-
-    st.markdown(
+    st.write(
         f"""
-        Under the current filters:
-
-        - **{largest_tech}** represents the largest share of filtered capacity.
-        - **{largest_region}** is the leading region by filtered installed capacity.
-        - The largest project is **{largest_project_name}** at **{largest_project_capacity:,.0f} MW**.
-        - The top 10 projects account for approximately **{top_10_share:,.1f}%** of filtered capacity.
+        The largest project under the current filters is **{largest_project_name}**
+        at **{largest_project_capacity:,.0f} MW**.
         """
     )
 
-    st.subheader("Technology Pipeline")
+    st.subheader("Top technologies")
 
-    tech_capacity = (
-        filtered_df
-        .groupby("Technology Type")["Installed Capacity (MWelec)"]
-        .sum()
-        .reset_index()
-        .sort_values("Installed Capacity (MWelec)", ascending=False)
+    tech_capacity = top_capacity_table(filtered_df, "Technology Type", n=8)
+    tech_capacity = tech_capacity.sort_values(
+        "Installed Capacity (MWelec)",
+        ascending=True,
     )
 
-    fig1 = px.bar(
+    fig_tech = px.bar(
         tech_capacity,
-        x="Technology Type",
-        y="Installed Capacity (MWelec)",
-        title="Installed Capacity by Technology",
+        x="Installed Capacity (MWelec)",
+        y="Technology Type",
+        orientation="h",
         labels={
-            "Technology Type": "Technology Type",
-            "Installed Capacity (MWelec)": "Installed Capacity (MW)",
+            "Installed Capacity (MWelec)": "Capacity (MW)",
+            "Technology Type": "",
         },
     )
 
-    st.plotly_chart(polish_chart(fig1), width="stretch")
-
-    st.subheader("Regional Pipeline")
-
-    region_capacity = (
-        filtered_df
-        .groupby("Region")["Installed Capacity (MWelec)"]
-        .sum()
-        .reset_index()
-        .sort_values("Installed Capacity (MWelec)", ascending=False)
+    st.plotly_chart(
+        polish_chart(fig_tech, height=380),
+        width="stretch",
+        config={"displayModeBar": False},
     )
 
-    fig2 = px.bar(
+    st.subheader("Top regions")
+
+    region_capacity = top_capacity_table(filtered_df, "Region", n=8)
+    region_capacity = region_capacity.sort_values(
+        "Installed Capacity (MWelec)",
+        ascending=True,
+    )
+
+    fig_region = px.bar(
         region_capacity,
-        x="Region",
-        y="Installed Capacity (MWelec)",
-        title="Installed Capacity by Region",
+        x="Installed Capacity (MWelec)",
+        y="Region",
+        orientation="h",
         labels={
-            "Region": "Region",
-            "Installed Capacity (MWelec)": "Installed Capacity (MW)",
+            "Installed Capacity (MWelec)": "Capacity (MW)",
+            "Region": "",
         },
     )
 
-    st.plotly_chart(polish_chart(fig2), width="stretch")
+    st.plotly_chart(
+        polish_chart(fig_region, height=380),
+        width="stretch",
+        config={"displayModeBar": False},
+    )
 
 # ---------------------------------------------------
-# PROJECT PIPELINE TAB
+# PIPELINE
 # ---------------------------------------------------
 
-with explorer_tab:
-    st.header("Project Pipeline")
+with pipeline_tab:
+    st.header("Project pipeline")
 
     st.write(
         """
-        Explore the filtered project universe. The table below shows a readable preview;
+        A filtered view of the project universe. The table shows a readable preview;
         the full filtered dataset can be downloaded.
         """
     )
@@ -811,7 +555,6 @@ with explorer_tab:
         "Region",
         "County",
         "Planning Authority",
-        "Planning Application Reference",
         "Screening Score",
     ]
 
@@ -820,29 +563,30 @@ with explorer_tab:
     ]
 
     st.dataframe(
-        filtered_df[available_display_columns].head(500),
+        filtered_df[available_display_columns].head(250),
         width="stretch",
     )
 
     st.caption(
-        "Showing first 500 filtered rows for readability. "
-        "Download the CSV for the full filtered dataset."
+        "Showing first 250 filtered rows for readability. Download the CSV for the full filtered dataset."
     )
 
     csv = filtered_df.to_csv(index=False).encode("utf-8")
 
     st.download_button(
-        label="Download filtered data as CSV",
+        label="Download filtered data",
         data=csv,
         file_name="filtered_renewable_projects.csv",
         mime="text/csv",
     )
 
-    st.subheader("Major Projects")
+    st.subheader("Major projects")
 
     top_projects = (
-        filtered_df
-        .sort_values("Installed Capacity (MWelec)", ascending=False)
+        filtered_df.sort_values(
+            "Installed Capacity (MWelec)",
+            ascending=False,
+        )
         [
             [
                 "Site Name",
@@ -858,33 +602,49 @@ with explorer_tab:
 
     st.dataframe(top_projects, width="stretch")
 
-    st.subheader("Capacity by Development Stage")
+    st.subheader("Capacity by development stage")
 
-    status_capacity = (
-        filtered_df
-        .groupby("Development Status (short)")["Installed Capacity (MWelec)"]
-        .sum()
-        .reset_index()
-        .sort_values("Installed Capacity (MWelec)", ascending=False)
+    status_capacity = top_capacity_table(
+        filtered_df,
+        "Development Status (short)",
+        n=10,
+    )
+
+    status_capacity = status_capacity.sort_values(
+        "Installed Capacity (MWelec)",
+        ascending=True,
     )
 
     fig_status = px.bar(
         status_capacity,
-        x="Development Status (short)",
-        y="Installed Capacity (MWelec)",
-        title="Filtered Capacity by Development Stage",
+        x="Installed Capacity (MWelec)",
+        y="Development Status (short)",
+        orientation="h",
         labels={
-            "Development Status (short)": "Development Stage",
-            "Installed Capacity (MWelec)": "Installed Capacity (MW)",
+            "Installed Capacity (MWelec)": "Capacity (MW)",
+            "Development Status (short)": "",
         },
     )
 
-    st.plotly_chart(polish_chart(fig_status), width="stretch")
+    st.plotly_chart(
+        polish_chart(fig_status, height=420),
+        width="stretch",
+        config={"displayModeBar": False},
+    )
 
-    st.subheader("Technology Pipeline by Development Stage")
+    st.subheader("Technology by development stage")
+
+    top_technology_list = (
+        filtered_df.groupby("Technology Type")["Installed Capacity (MWelec)"]
+        .sum()
+        .sort_values(ascending=False)
+        .head(6)
+        .index
+        .tolist()
+    )
 
     pipeline_matrix = (
-        filtered_df
+        filtered_df[filtered_df["Technology Type"].isin(top_technology_list)]
         .groupby(["Technology Type", "Development Status (short)"])
         ["Installed Capacity (MWelec)"]
         .sum()
@@ -893,25 +653,29 @@ with explorer_tab:
 
     fig_pipeline = px.bar(
         pipeline_matrix,
-        x="Technology Type",
-        y="Installed Capacity (MWelec)",
+        x="Installed Capacity (MWelec)",
+        y="Technology Type",
         color="Development Status (short)",
-        title="Technology Pipeline by Development Stage",
+        orientation="h",
         labels={
-            "Technology Type": "Technology",
-            "Installed Capacity (MWelec)": "Installed Capacity (MW)",
-            "Development Status (short)": "Development Stage",
+            "Installed Capacity (MWelec)": "Capacity (MW)",
+            "Technology Type": "",
+            "Development Status (short)": "Stage",
         },
     )
 
-    st.plotly_chart(polish_chart(fig_pipeline), width="stretch")
+    st.plotly_chart(
+        polish_chart(fig_pipeline, height=430),
+        width="stretch",
+        config={"displayModeBar": False},
+    )
 
 # ---------------------------------------------------
-# GEOGRAPHIC VIEW TAB
+# MAP
 # ---------------------------------------------------
 
 with map_tab:
-    st.header("Geographic View")
+    st.header("Map")
 
     map_df = filtered_df.dropna(subset=["Latitude", "Longitude"]).copy()
 
@@ -935,136 +699,127 @@ with map_tab:
             ],
             zoom=4,
             height=650,
-            title="UK Renewable Energy Projects",
         )
 
         fig_map.update_layout(
             mapbox_style="open-street-map",
-            margin={"r": 0, "t": 40, "l": 0, "b": 0},
+            margin={"r": 0, "t": 0, "l": 0, "b": 0},
         )
 
-        st.plotly_chart(fig_map, width="stretch")
+        st.plotly_chart(
+            fig_map,
+            width="stretch",
+            config={"displayModeBar": False},
+        )
 
 # ---------------------------------------------------
-# PROJECT BRIEFS TAB
+# BRIEFS
 # ---------------------------------------------------
 
-with report_tab:
-    st.header("Project Briefs")
-
-    st.write(
-        """
-        Select a project to generate a structured project brief with key planning,
-        technical and screening information.
-        """
-    )
+with briefs_tab:
+    st.header("Project briefs")
 
     project_options = sorted(filtered_df["Site Name"].dropna().unique())
 
-    if len(project_options) == 0:
-        st.warning("No projects are available under the current filters.")
+    selected_report_project = st.selectbox(
+        "Select a project",
+        project_options,
+        key="project_report_selector",
+    )
 
+    report_row = filtered_df[
+        filtered_df["Site Name"] == selected_report_project
+    ].iloc[0]
+
+    st.subheader(selected_report_project)
+
+    report_col1, report_col2, report_col3, report_col4 = st.columns(4)
+
+    with report_col1:
+        st.metric("Technology", report_row.get("Technology Type", "N/A"))
+
+    with report_col2:
+        st.metric(
+            "Capacity",
+            f"{report_row.get('Installed Capacity (MWelec)', 0):,.1f} MW",
+        )
+
+    with report_col3:
+        st.metric("Status", report_row.get("Development Status (short)", "N/A"))
+
+    with report_col4:
+        st.metric(
+            "Screening Score",
+            f"{report_row.get('Screening Score', 0):.0f}/100",
+        )
+
+    st.subheader("Project details")
+
+    project_details = pd.DataFrame(
+        {
+            "Field": [
+                "Operator / Applicant",
+                "Region",
+                "County",
+                "Country",
+                "Planning Authority",
+                "Planning Application Reference",
+                "Planning Submitted",
+                "Planning Granted",
+                "Operational Date",
+            ],
+            "Value": [
+                report_row.get("Operator (or Applicant)", "N/A"),
+                report_row.get("Region", "N/A"),
+                report_row.get("County", "N/A"),
+                report_row.get("Country", "N/A"),
+                report_row.get("Planning Authority", "N/A"),
+                report_row.get("Planning Application Reference", "N/A"),
+                report_row.get("Planning Application Submitted", "N/A"),
+                report_row.get("Planning Permission  Granted", "N/A"),
+                report_row.get("Operational", "N/A"),
+            ],
+        }
+    )
+
+    st.table(project_details)
+
+    st.subheader("Comparable projects")
+
+    selected_technology_for_report = report_row.get("Technology Type", "")
+    selected_capacity = report_row.get("Installed Capacity (MWelec)", 0)
+
+    lower_bound = selected_capacity * 0.7
+    upper_bound = selected_capacity * 1.3
+
+    comparable_projects = filtered_df[
+        (filtered_df["Technology Type"] == selected_technology_for_report)
+        & (filtered_df["Installed Capacity (MWelec)"] >= lower_bound)
+        & (filtered_df["Installed Capacity (MWelec)"] <= upper_bound)
+        & (filtered_df["Site Name"] != selected_report_project)
+    ].sort_values(
+        "Installed Capacity (MWelec)",
+        ascending=False,
+    ).head(5)
+
+    if comparable_projects.empty:
+        st.write("No close comparable projects found under the current filters.")
     else:
-        selected_report_project = st.selectbox(
-            "Select a project",
-            project_options,
-            key="project_report_selector",
-        )
-
-        report_row = filtered_df[
-            filtered_df["Site Name"] == selected_report_project
-        ].iloc[0]
-
-        st.subheader(selected_report_project)
-
-        report_col1, report_col2, report_col3, report_col4 = st.columns(4)
-
-        with report_col1:
-            st.metric("Technology", report_row.get("Technology Type", "N/A"))
-
-        with report_col2:
-            st.metric(
-                "Capacity",
-                f"{report_row.get('Installed Capacity (MWelec)', 0):,.1f} MW",
-            )
-
-        with report_col3:
-            st.metric("Status", report_row.get("Development Status (short)", "N/A"))
-
-        with report_col4:
-            st.metric(
-                "Screening Score",
-                f"{report_row.get('Screening Score', 0):.0f}/100",
-            )
-
-        st.markdown("### Project Details")
-
-        project_details = pd.DataFrame(
-            {
-                "Field": [
-                    "Operator / Applicant",
+        st.dataframe(
+            comparable_projects[
+                [
+                    "Site Name",
+                    "Technology Type",
+                    "Installed Capacity (MWelec)",
                     "Region",
-                    "County",
-                    "Country",
-                    "Planning Authority",
-                    "Planning Application Reference",
-                    "Planning Submitted",
-                    "Planning Granted",
-                    "Operational Date",
-                ],
-                "Value": [
-                    report_row.get("Operator (or Applicant)", "N/A"),
-                    report_row.get("Region", "N/A"),
-                    report_row.get("County", "N/A"),
-                    report_row.get("Country", "N/A"),
-                    report_row.get("Planning Authority", "N/A"),
-                    report_row.get("Planning Application Reference", "N/A"),
-                    report_row.get("Planning Application Submitted", "N/A"),
-                    report_row.get("Planning Permission  Granted", "N/A"),
-                    report_row.get("Operational", "N/A"),
-                ],
-            }
+                    "Development Status (short)",
+                    "Screening Score",
+                ]
+            ],
+            width="stretch",
         )
 
-        st.table(project_details)
-
-        st.markdown("### Comparable Projects")
-
-        selected_technology_for_report = report_row.get("Technology Type", "")
-        selected_capacity = report_row.get("Installed Capacity (MWelec)", 0)
-
-        lower_bound = selected_capacity * 0.7
-        upper_bound = selected_capacity * 1.3
-
-        comparable_projects = filtered_df[
-            (filtered_df["Technology Type"] == selected_technology_for_report)
-            & (filtered_df["Installed Capacity (MWelec)"] >= lower_bound)
-            & (filtered_df["Installed Capacity (MWelec)"] <= upper_bound)
-            & (filtered_df["Site Name"] != selected_report_project)
-        ].sort_values(
-            "Installed Capacity (MWelec)",
-            ascending=False,
-        ).head(5)
-
-        if comparable_projects.empty:
-            st.write("No close comparable projects found under the current filters.")
-
-        else:
-            st.dataframe(
-                comparable_projects[
-                    [
-                        "Site Name",
-                        "Technology Type",
-                        "Installed Capacity (MWelec)",
-                        "Region",
-                        "Development Status (short)",
-                        "Screening Score",
-                    ]
-                ],
-                width="stretch",
-            )
-
-        report_text = f"""
+    report_text = f"""
 Renewable Project Brief
 =======================
 
@@ -1101,33 +856,26 @@ technology type and data completeness.
 Generated using the Renewable Project Screening Studio.
 """
 
-        safe_project_name = (
-            selected_report_project
-            .replace("/", "-")
-            .replace("\\", "-")
-            .replace(" ", "_")
-        )
+    safe_project_name = (
+        selected_report_project
+        .replace("/", "-")
+        .replace("\\", "-")
+        .replace(" ", "_")
+    )
 
-        st.download_button(
-            label="Download project brief",
-            data=report_text,
-            file_name=f"{safe_project_name}_project_brief.txt",
-            mime="text/plain",
-        )
+    st.download_button(
+        label="Download project brief",
+        data=report_text,
+        file_name=f"{safe_project_name}_project_brief.txt",
+        mime="text/plain",
+    )
 
 # ---------------------------------------------------
-# OFFSHORE WIND MODEL TAB
+# OFFSHORE MODEL
 # ---------------------------------------------------
 
 with offshore_tab:
-    st.header("Offshore Wind Model")
-
-    st.write(
-        """
-        This section estimates basic engineering and commercial metrics for offshore wind projects.
-        The model is simplified and intended for educational and portfolio purposes.
-        """
-    )
+    st.header("Offshore wind model")
 
     offshore_df = filtered_df[
         filtered_df["Technology Type"].str.contains(
@@ -1139,8 +887,7 @@ with offshore_tab:
 
     if offshore_df.empty:
         st.warning(
-            "No offshore wind projects are currently visible. "
-            "Change the filters in the dashboard controls to include Wind Offshore projects."
+            "No offshore wind projects are visible under the current filters."
         )
 
     else:
@@ -1157,8 +904,6 @@ with offshore_tab:
         ].iloc[0]
 
         project_capacity = project_row["Installed Capacity (MWelec)"]
-
-        st.subheader("Selected Project")
 
         selected_col1, selected_col2, selected_col3 = st.columns(3)
 
@@ -1246,19 +991,19 @@ with offshore_tab:
             annual_carbon_savings_tonnes * lifetime
         )
 
-        st.subheader("Calculated Results")
+        st.subheader("Calculated results")
 
         result_col1, result_col2, result_col3 = st.columns(3)
 
         with result_col1:
-            st.metric("Annual Energy", f"{annual_energy_mwh:,.0f} MWh/year")
+            st.metric("Annual energy", f"{annual_energy_mwh:,.0f} MWh/year")
 
         with result_col2:
             st.metric("Turbines", f"{number_of_turbines:,.1f}")
 
         with result_col3:
             st.metric(
-                "Annual Revenue",
+                "Annual revenue",
                 f"£{annual_revenue / 1_000_000:,.1f}m/year",
             )
 
@@ -1268,11 +1013,11 @@ with offshore_tab:
             st.metric("CAPEX", f"£{total_capex / 1_000_000_000:,.2f}bn")
 
         with result_col5:
-            st.metric("Simple Payback", f"{simple_payback:,.1f} years")
+            st.metric("Simple payback", f"{simple_payback:,.1f} years")
 
         with result_col6:
             st.metric(
-                "Lifetime Revenue",
+                "Lifetime revenue",
                 f"£{lifetime_revenue / 1_000_000_000:,.2f}bn",
             )
 
@@ -1280,24 +1025,17 @@ with offshore_tab:
 
         with result_col7:
             st.metric(
-                "Annual Carbon Savings",
+                "Annual carbon savings",
                 f"{annual_carbon_savings_tonnes:,.0f} tonnes CO₂e/year",
             )
 
         with result_col8:
             st.metric(
-                "Lifetime Carbon Savings",
+                "Lifetime carbon savings",
                 f"{lifetime_carbon_savings_tonnes:,.0f} tonnes CO₂e",
             )
 
-        st.subheader("Sensitivity Analysis")
-
-        st.write(
-            """
-            This table shows how the simple payback period changes as the capacity factor changes,
-            while keeping the other assumptions constant.
-            """
-        )
+        st.subheader("Sensitivity analysis")
 
         sensitivity_rows = []
 
@@ -1324,13 +1062,16 @@ with offshore_tab:
             x="Capacity factor",
             y="Simple payback (years)",
             markers=True,
-            title="Simple Payback Sensitivity to Capacity Factor",
         )
 
-        st.plotly_chart(polish_chart(fig_sensitivity), width="stretch")
+        st.plotly_chart(
+            polish_chart(fig_sensitivity, height=380),
+            width="stretch",
+            config={"displayModeBar": False},
+        )
 
 # ---------------------------------------------------
-# METHODOLOGY TAB
+# METHODOLOGY
 # ---------------------------------------------------
 
 with methodology_tab:
@@ -1339,47 +1080,36 @@ with methodology_tab:
     st.write(
         """
         This project is a simplified renewable infrastructure screening tool.
-        It is designed to demonstrate engineering judgement, data cleaning,
-        visualisation, geospatial mapping and basic techno-economic analysis.
+        It demonstrates data cleaning, visualisation, geospatial mapping and basic
+        techno-economic analysis.
         """
     )
 
-    st.subheader("Data Processing")
+    st.subheader("Data processing")
 
     st.markdown(
         """
-        The app performs the following steps:
-
         1. Loads the renewable project dataset from CSV.
         2. Converts installed capacity to numeric values.
         3. Removes projects without valid installed capacity.
         4. Converts British National Grid coordinates into latitude and longitude.
-        5. Applies user-selected filters for technology, region and development status.
+        5. Applies selected filters for technology, region and development status.
         """
     )
 
-    st.subheader("Project Screening Score")
+    st.subheader("Project screening score")
 
     st.markdown(
         """
-        Each project receives a simplified score out of 100 based on:
-
-        - installed capacity
-        - development status
-        - technology type
-        - completeness of key project information
-
-        The score is intended as an early-stage screening indicator, not a definitive
-        investment ranking.
+        Each project receives a simplified score out of 100 based on installed capacity,
+        development status, technology type and completeness of key project information.
         """
     )
 
-    st.subheader("Offshore Wind Formulae")
+    st.subheader("Offshore wind formulae")
 
     st.markdown(
         """
-        The offshore wind model uses the following simplified formulae:
-
         - Annual energy generation = capacity × capacity factor × 8760
         - Number of turbines = project capacity ÷ turbine rating
         - Annual revenue = annual energy generation × electricity price
@@ -1394,19 +1124,9 @@ with methodology_tab:
 
     st.markdown(
         """
-        This is a simplified educational and portfolio model. It does not include:
-
-        - detailed wind resource modelling
-        - turbine availability
-        - wake losses
-        - grid connection cost
-        - financing cost
-        - CfD pricing
-        - inflation
-        - operational expenditure
-        - decommissioning costs
-        - planning-risk modelling
-
-        The tool should not be interpreted as an investment-grade renewable energy model.
+        This is a simplified educational and portfolio model. It does not include detailed
+        wind resource modelling, turbine availability, wake losses, grid connection cost,
+        financing cost, CfD pricing, inflation, operational expenditure, decommissioning
+        costs or planning-risk modelling.
         """
     )
