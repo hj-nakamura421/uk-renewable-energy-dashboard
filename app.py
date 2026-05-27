@@ -20,61 +20,132 @@ st.set_page_config(
 st.markdown(
     """
     <style>
+    /* Main page container */
     .block-container {
-        padding-top: 2.5rem;
-        padding-bottom: 3rem;
-        max-width: 1180px;
+        padding-top: 3rem;
+        padding-bottom: 4rem;
+        max-width: 1120px;
+    }
+
+    /* General typography */
+    html, body, [class*="css"] {
+        font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display",
+                     "Segoe UI", sans-serif;
     }
 
     h1 {
-        font-size: 3rem;
+        font-size: 3.4rem;
         font-weight: 750;
-        letter-spacing: -0.04em;
-        margin-bottom: 0.5rem;
+        letter-spacing: -0.055em;
+        line-height: 1.05;
+        color: #1D1D1F;
+        margin-bottom: 0.6rem;
     }
 
     h2 {
-        font-size: 1.8rem;
+        font-size: 2rem;
         font-weight: 700;
-        letter-spacing: -0.025em;
-        margin-top: 2.2rem;
+        letter-spacing: -0.035em;
+        color: #1D1D1F;
+        margin-top: 2.4rem;
+        margin-bottom: 1rem;
     }
 
     h3 {
         font-size: 1.25rem;
         font-weight: 650;
-        margin-top: 1.8rem;
+        color: #1D1D1F;
+        margin-top: 1.6rem;
     }
 
     p, li {
         font-size: 1rem;
-        line-height: 1.6;
+        line-height: 1.65;
+        color: #3A3A3C;
     }
 
-    [data-testid="stMetric"] {
+    /* Hide Streamlit default chrome */
+    #MainMenu {
+        visibility: hidden;
+    }
+
+    footer {
+        visibility: hidden;
+    }
+
+    header {
+        visibility: hidden;
+    }
+
+    /* Info boxes */
+    .stAlert {
+        border-radius: 1.1rem;
+        border: 1px solid #E5E5EA;
         background-color: #FFFFFF;
-        border: 1px solid #E5E7EB;
-        padding: 1rem;
-        border-radius: 1.25rem;
-        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+        color: #1D1D1F;
+    }
+
+    /* Metric cards */
+    [data-testid="stMetric"] {
+        background: #FFFFFF;
+        border: 1px solid #E5E5EA;
+        padding: 1.2rem 1.3rem;
+        border-radius: 1.4rem;
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.045);
+    }
+
+    [data-testid="stMetricLabel"] {
+        color: #6E6E73;
+        font-size: 0.9rem;
+        font-weight: 500;
     }
 
     [data-testid="stMetricValue"] {
-        font-size: 1.55rem;
+        color: #1D1D1F;
+        font-size: 1.7rem;
         font-weight: 700;
+        letter-spacing: -0.03em;
     }
 
-    .stAlert {
-        border-radius: 1rem;
+    /* Tabs */
+    button[data-baseweb="tab"] {
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: #6E6E73;
+        padding-top: 0.7rem;
+        padding-bottom: 0.7rem;
     }
 
+    button[data-baseweb="tab"][aria-selected="true"] {
+        color: #007AFF;
+    }
+
+    /* Dataframes */
     div[data-testid="stDataFrame"] {
         border-radius: 1rem;
         overflow: hidden;
+        border: 1px solid #E5E5EA;
     }
 
-    button {
-        border-radius: 999px !important;
+    /* Buttons */
+    .stDownloadButton button {
+        border-radius: 999px;
+        border: 1px solid #007AFF;
+        background-color: #007AFF;
+        color: white;
+        font-weight: 600;
+        padding: 0.55rem 1.2rem;
+    }
+
+    /* Sidebar */
+    section[data-testid="stSidebar"] {
+        background-color: #FFFFFF;
+        border-right: 1px solid #E5E5EA;
+    }
+
+    /* Reduce excessive spacing around markdown */
+    .element-container {
+        margin-bottom: 0.6rem;
     }
     </style>
     """,
@@ -219,19 +290,15 @@ st.title("Renewable Project Screening Studio")
 
 st.markdown(
     """
-    A clean project-screening tool for UK renewable energy infrastructure.
+    A clean, portfolio-grade tool for screening UK renewable energy infrastructure projects.
 
-    Explore renewable project pipelines, compare regional capacity, map developments,
-    generate project briefs and run simplified offshore wind feasibility analysis.
+    Explore project pipelines, compare regional capacity, map developments, generate project briefs
+    and test simplified offshore wind feasibility assumptions.
     """
 )
 
 st.caption(
-    "Built with Python, Streamlit, pandas, Plotly and pyproj using public UK renewable planning data."
-)
-
-st.info(
-    "Portfolio project demonstrating data cleaning, geospatial mapping, project screening and simplified techno-economic modelling."
+    "Python · Streamlit · pandas · Plotly · pyproj · UK renewable planning data"
 )
 
 # ---------------------------------------------------
@@ -240,34 +307,38 @@ st.info(
 
 st.subheader("Core capabilities")
 
-use_col1, use_col2, use_col3 = st.columns(3)
+st.divider()
 
-with use_col1:
+cap_col1, cap_col2, cap_col3 = st.columns(3)
+
+with cap_col1:
     st.markdown(
         """
-        **Screen**
+        ### Screen
 
-        Filter projects by technology, stage and region.
+        Filter renewable projects by technology, stage and region.
         """
     )
 
-with use_col2:
+with cap_col2:
     st.markdown(
         """
-        **Analyse**
+        ### Compare
 
-        Compare capacity pipelines and project status.
+        Analyse capacity pipelines across regions and technologies.
         """
     )
 
-with use_col3:
+with cap_col3:
     st.markdown(
         """
-        **Model**
+        ### Model
 
-        Estimate offshore wind generation, payback and carbon impact.
+        Estimate offshore wind generation, revenue, payback and carbon impact.
         """
     )
+
+st.divider()
 
 # ---------------------------------------------------
 # SIDEBAR FILTERS
