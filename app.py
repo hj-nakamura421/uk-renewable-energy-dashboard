@@ -115,21 +115,23 @@ except Exception as e:
 # TITLE / INTRO
 # ---------------------------------------------------
 
-st.title("UK Renewable Energy Infrastructure Dashboard")
+st.title("Renewable Project Screening Studio")
 
 st.markdown(
     """
-    Explore UK renewable energy projects, compare regional capacity, identify major developments,
-    and run simplified offshore wind feasibility calculations.
+    A project-screening tool for UK renewable energy infrastructure.
+
+    This app uses public planning data to explore project pipelines, compare regional capacity,
+    identify major renewable developments and run simplified offshore wind feasibility analysis.
 
     **Built with Python, Streamlit, pandas, Plotly and pyproj.**
     """
 )
 
 st.info(
-    "This tool is designed as an early-stage renewable infrastructure analysis dashboard. "
-    "It is not an investment-grade model, but it demonstrates how public energy datasets "
-    "can be turned into useful engineering and commercial insight."
+    "Designed as a portfolio-grade engineering data project: it demonstrates data cleaning, "
+    "visualisation, geospatial mapping, engineering assumptions, financial-style calculations "
+    "and deployment of a working web app."
 )
 
 st.caption(
