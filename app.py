@@ -220,6 +220,19 @@ filtered_df = df[
     & (df["Region"].isin(selected_region))
 ].copy()
 
+
+overview_tab, explorer_tab, map_tab, report_tab, offshore_tab, methodology_tab = st.tabs(
+    [
+        "Overview",
+        "Pipeline Explorer",
+        "Map",
+        "Project Reports",
+        "Offshore Wind Model",
+        "Methodology",
+    ]
+)
+
+
 # ---------------------------------------------------
 # EMPTY FILTER WARNING
 # ---------------------------------------------------
