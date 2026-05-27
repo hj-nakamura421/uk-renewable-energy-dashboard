@@ -1,40 +1,72 @@
 # Learning Log
 
-## Day 1
+## Skills Developed
 
-- Created a Python project using uv
-- Installed Streamlit, pandas and Plotly
-- Built a basic Streamlit app
-- Learned how to run a local app from Terminal
+Through this project, I developed practical experience in:
 
-## Day 2
+- Python basics
+- pandas data handling
+- Streamlit app development
+- Plotly visualisation
+- geospatial coordinate conversion using pyproj
+- Git/GitHub version control
+- Streamlit deployment
+- simplified techno-economic modelling
+- technical documentation
+- dashboard design and presentation
 
-- Loaded a real CSV dataset
-- Fixed a CSV encoding issue using latin1
-- Displayed a dataframe in Streamlit
-- Read and inspected dataset columns
+## Main Lessons
 
-## Day 3
+This project helped me understand how to turn a real-world public dataset into an interactive engineering tool.
 
-- Added sidebar filters
-- Added project metrics
-- Added capacity charts
-- Added top projects table
-- Used Git to commit project progress
+I learned how to:
 
-## Day 4
+- load and inspect a CSV dataset
+- clean numeric data
+- use sidebar filters to control a dashboard
+- create interactive charts
+- build an interactive project map
+- calculate engineering metrics from assumptions
+- document assumptions and limitations
+- deploy a working app online
+- use Git commits to save progress
 
-- Added an offshore wind feasibility calculator
-- Implemented annual energy, revenue, CAPEX and payback calculations
-- Added carbon savings estimates
-- Fixed indentation errors in Python
+## Key Technical Concepts
 
-## Day 5
+### pandas
 
-- Added CSV download functionality
-- Added a UK project map
-- Wrote methodology and README documentation
+I used pandas to load, clean, filter and summarise the dataset.
 
-## Reflection
+### Streamlit
 
-This project helped me learn basic Python, Streamlit, pandas, Git and engineering data analysis. I used AI tools to support development, but I focused on understanding the project structure, data flow and engineering assumptions.
+I used Streamlit to turn Python code into an interactive web app.
+
+### Plotly
+
+I used Plotly to create interactive charts and maps.
+
+### pyproj
+
+I used pyproj to convert British National Grid coordinates into latitude and longitude.
+
+### Git/GitHub
+
+I used Git to create project checkpoints and GitHub to host the repository.
+
+## Interview Reflection
+
+I should be able to explain:
+
+- why I chose this dataset
+- how I cleaned the data
+- how the filters work
+- how the map works
+- how the screening score works
+- how the offshore wind model works
+- why the model is simplified
+- what the project limitations are
+- what I would improve next
+
+## Summary
+
+This project helped me connect mechanical engineering, energy infrastructure and data analysis. It gave me a practical example of how software can be used to support engineering decision-making.
