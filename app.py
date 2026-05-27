@@ -860,8 +860,8 @@ with cta_col2:
 
 st.markdown(
     """
-    **Contact:** replace-with-your-email@example.com  
-    **GitHub:** replace-with-your-github-link  
-    **LinkedIn:** replace-with-your-linkedin-link
+    **Contact:** hjnylf2851race@gmail.com  
+    **GitHub:** https://github.com/hj-nakamura421  
+    **LinkedIn:** https://www.linkedin.com/in/hj-nakamura/
     """
 )
