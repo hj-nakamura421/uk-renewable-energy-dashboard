@@ -14,33 +14,67 @@ st.set_page_config(
 )
 
 # ---------------------------------------------------
-# SIMPLE CUSTOM CSS
+# CLEAN APPLE-STYLE CSS
 # ---------------------------------------------------
 
 st.markdown(
     """
     <style>
     .block-container {
-        padding-top: 2rem;
-        padding-bottom: 2rem;
-        max-width: 1250px;
+        padding-top: 2.5rem;
+        padding-bottom: 3rem;
+        max-width: 1180px;
     }
 
     h1 {
-        font-size: 2.8rem;
-        font-weight: 800;
+        font-size: 3rem;
+        font-weight: 750;
+        letter-spacing: -0.04em;
+        margin-bottom: 0.5rem;
     }
 
-    h2, h3 {
-        margin-top: 2rem;
+    h2 {
+        font-size: 1.8rem;
+        font-weight: 700;
+        letter-spacing: -0.025em;
+        margin-top: 2.2rem;
+    }
+
+    h3 {
+        font-size: 1.25rem;
+        font-weight: 650;
+        margin-top: 1.8rem;
+    }
+
+    p, li {
+        font-size: 1rem;
+        line-height: 1.6;
+    }
+
+    [data-testid="stMetric"] {
+        background-color: #FFFFFF;
+        border: 1px solid #E5E7EB;
+        padding: 1rem;
+        border-radius: 1.25rem;
+        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
     }
 
     [data-testid="stMetricValue"] {
-        font-size: 1.7rem;
+        font-size: 1.55rem;
+        font-weight: 700;
     }
 
     .stAlert {
-        border-radius: 0.75rem;
+        border-radius: 1rem;
+    }
+
+    div[data-testid="stDataFrame"] {
+        border-radius: 1rem;
+        overflow: hidden;
+    }
+
+    button {
+        border-radius: 999px !important;
     }
     </style>
     """,
@@ -185,58 +219,53 @@ st.title("Renewable Project Screening Studio")
 
 st.markdown(
     """
-    A project-screening tool for UK renewable energy infrastructure.
+    A clean project-screening tool for UK renewable energy infrastructure.
 
-    This app uses public planning data to explore project pipelines, compare regional capacity,
-    identify major renewable developments and run simplified offshore wind feasibility analysis.
-
-    **Built with Python, Streamlit, pandas, Plotly and pyproj.**
+    Explore renewable project pipelines, compare regional capacity, map developments,
+    generate project briefs and run simplified offshore wind feasibility analysis.
     """
 )
 
-st.info(
-    "Designed as a portfolio-grade engineering data project: it demonstrates data cleaning, "
-    "visualisation, geospatial mapping, engineering assumptions, financial-style calculations "
-    "and deployment of a working web app."
-)
-
 st.caption(
-    "Data source: UK Renewable Energy Planning Database. "
-    "This app uses a locally stored extract of the public dataset."
+    "Built with Python, Streamlit, pandas, Plotly and pyproj using public UK renewable planning data."
+)
+
+st.info(
+    "Portfolio project demonstrating data cleaning, geospatial mapping, project screening and simplified techno-economic modelling."
 )
 
 # ---------------------------------------------------
-# USE CASE CARDS
+# CORE CAPABILITIES
 # ---------------------------------------------------
 
-st.subheader("What this tool helps with")
+st.subheader("Core capabilities")
 
 use_col1, use_col2, use_col3 = st.columns(3)
 
 with use_col1:
     st.markdown(
         """
-        **Project Screening**
+        **Screen**
 
-        Quickly filter renewable energy projects by technology, region and development status.
+        Filter projects by technology, stage and region.
         """
     )
 
 with use_col2:
     st.markdown(
         """
-        **Pipeline Analysis**
+        **Analyse**
 
-        Compare renewable capacity by technology, region and project stage.
+        Compare capacity pipelines and project status.
         """
     )
 
 with use_col3:
     st.markdown(
         """
-        **Feasibility Modelling**
+        **Model**
 
-        Estimate offshore wind generation, revenue, CAPEX, payback and carbon savings.
+        Estimate offshore wind generation, payback and carbon impact.
         """
     )
 
@@ -319,27 +348,27 @@ if "Record Last Updated Parsed" in filtered_df.columns:
 
 overview_tab, explorer_tab, map_tab, report_tab, offshore_tab, methodology_tab = st.tabs(
     [
-        "Overview",
-        "Pipeline Explorer",
-        "Map",
-        "Project Reports",
+        "Portfolio Overview",
+        "Project Pipeline",
+        "Geographic View",
+        "Project Briefs",
         "Offshore Wind Model",
         "Methodology",
     ]
 )
 
 # ---------------------------------------------------
-# OVERVIEW TAB
+# PORTFOLIO OVERVIEW TAB
 # ---------------------------------------------------
 
 with overview_tab:
-    st.header("Overview")
+    st.header("Portfolio Overview")
 
     col1, col2, col3, col4 = st.columns(4)
 
     with col1:
         st.metric(
-            "Number of Projects",
+            "Projects",
             f"{len(filtered_df):,}"
         )
 
@@ -357,7 +386,7 @@ with overview_tab:
 
     with col4:
         st.metric(
-            "Latest Record Update",
+            "Latest Update",
             latest_update_text
         )
 
@@ -458,16 +487,16 @@ with overview_tab:
     st.plotly_chart(fig2, width="stretch")
 
 # ---------------------------------------------------
-# PIPELINE EXPLORER TAB
+# PROJECT PIPELINE TAB
 # ---------------------------------------------------
 
 with explorer_tab:
-    st.header("Pipeline Explorer")
+    st.header("Project Pipeline")
 
     st.write(
         """
         Use the sidebar filters to narrow the dataset by technology, region and development status.
-        You can also download the filtered project data as a CSV.
+        The table below shows a readable preview; the full filtered dataset can be downloaded.
         """
     )
 
@@ -489,8 +518,12 @@ with explorer_tab:
     ]
 
     st.dataframe(
-        filtered_df[available_display_columns],
+        filtered_df[available_display_columns].head(500),
         width="stretch"
+    )
+
+    st.caption(
+        "Showing first 500 filtered rows for readability. Download the CSV for the full filtered dataset."
     )
 
     csv = filtered_df.to_csv(index=False).encode("utf-8")
@@ -573,11 +606,11 @@ with explorer_tab:
     st.plotly_chart(fig_pipeline, width="stretch")
 
 # ---------------------------------------------------
-# MAP TAB
+# GEOGRAPHIC VIEW TAB
 # ---------------------------------------------------
 
 with map_tab:
-    st.header("Geographic Project View")
+    st.header("Geographic View")
 
     map_df = filtered_df.dropna(subset=["Latitude", "Longitude"]).copy()
 
@@ -617,11 +650,11 @@ with map_tab:
         st.plotly_chart(fig_map, width="stretch")
 
 # ---------------------------------------------------
-# PROJECT REPORTS TAB
+# PROJECT BRIEFS TAB
 # ---------------------------------------------------
 
 with report_tab:
-    st.header("Project Reports")
+    st.header("Project Briefs")
 
     st.write(
         """
@@ -797,12 +830,12 @@ Generated using the Renewable Project Screening Studio.
 # ---------------------------------------------------
 
 with offshore_tab:
-    st.header("Offshore Wind Feasibility Model")
+    st.header("Offshore Wind Model")
 
     st.write(
         """
         This section estimates basic engineering and commercial metrics for offshore wind projects.
-        The model is simplified and intended for educational/CV project purposes.
+        The model is simplified and intended for educational and portfolio purposes.
         """
     )
 
@@ -929,53 +962,53 @@ with offshore_tab:
 
         with result_col1:
             st.metric(
-                "Estimated annual energy",
+                "Annual Energy",
                 f"{annual_energy_mwh:,.0f} MWh/year"
             )
 
         with result_col2:
             st.metric(
-                "Estimated number of turbines",
+                "Turbines",
                 f"{number_of_turbines:,.1f}"
             )
 
         with result_col3:
             st.metric(
-                "Estimated annual revenue",
-                f"£{annual_revenue / 1_000_000:,.1f} million/year"
+                "Annual Revenue",
+                f"£{annual_revenue / 1_000_000:,.1f}m/year"
             )
 
         result_col4, result_col5, result_col6 = st.columns(3)
 
         with result_col4:
             st.metric(
-                "Estimated CAPEX",
-                f"£{total_capex / 1_000_000_000:,.2f} billion"
+                "CAPEX",
+                f"£{total_capex / 1_000_000_000:,.2f}bn"
             )
 
         with result_col5:
             st.metric(
-                "Simple payback period",
+                "Simple Payback",
                 f"{simple_payback:,.1f} years"
             )
 
         with result_col6:
             st.metric(
-                "Lifetime revenue",
-                f"£{lifetime_revenue / 1_000_000_000:,.2f} billion"
+                "Lifetime Revenue",
+                f"£{lifetime_revenue / 1_000_000_000:,.2f}bn"
             )
 
         result_col7, result_col8 = st.columns(2)
 
         with result_col7:
             st.metric(
-                "Estimated annual carbon savings",
+                "Annual Carbon Savings",
                 f"{annual_carbon_savings_tonnes:,.0f} tonnes CO₂e/year"
             )
 
         with result_col8:
             st.metric(
-                "Estimated lifetime carbon savings",
+                "Lifetime Carbon Savings",
                 f"{lifetime_carbon_savings_tonnes:,.0f} tonnes CO₂e"
             )
 
