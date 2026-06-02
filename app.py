@@ -11,7 +11,7 @@ from pyproj import Transformer
 # ---------------------------------------------------
 
 st.set_page_config(
-    page_title="UK Renewable Project Screening Dashboard",
+    page_title="UK Energy Infrastructure Intelligence Platform",
     page_icon="⚡",
     layout="wide",
 )
@@ -23,6 +23,12 @@ st.set_page_config(
 DATA_PATH = Path("data/renewable_projects.csv")
 GITHUB_URL = "https://github.com/hj-nakamura421/uk-renewable-energy-dashboard"
 
+ASSETS_DIR = Path("assets")
+HERO_IMAGE = ASSETS_DIR / "hero.jpg"
+PLANNING_IMAGE = ASSETS_DIR / "planning.jpg"
+GRID_IMAGE = ASSETS_DIR / "grid.jpg"
+OFFSHORE_IMAGE = ASSETS_DIR / "offshore.jpg"
+
 # ---------------------------------------------------
 # CSS
 # ---------------------------------------------------
@@ -31,7 +37,7 @@ st.markdown(
     """
     <style>
     .block-container {
-        padding-top: 1.6rem;
+        padding-top: 1.4rem;
         padding-bottom: 3rem;
         padding-left: 2.7rem;
         padding-right: 2.7rem;
@@ -190,6 +196,10 @@ st.markdown(
         border-radius: 1rem !important;
     }
 
+    img {
+        border-radius: 1rem;
+    }
+
     @media (max-width: 900px) {
         .block-container {
             padding-left: 1rem;
@@ -306,10 +316,10 @@ def get_live_grid_context():
         renewable_fuels = ["wind", "solar", "hydro", "biomass"]
         renewable_share = sum(generation_mix.get(fuel, 0) for fuel in renewable_fuels)
 
+        dominant_fuel = "N/A"
+
         if generation_mix:
             dominant_fuel = max(generation_mix.items(), key=lambda item: item[1])[0]
-        else:
-            dominant_fuel = "N/A"
 
         return {
             "available": True,
@@ -707,22 +717,25 @@ if "Record Last Updated Parsed" in df.columns:
 # ---------------------------------------------------
 
 with st.container(border=True):
-    header_left, header_right = st.columns([1.8, 1])
+    header_left, header_right = st.columns([1.55, 1])
 
     with header_left:
-        st.title("UK Renewable Project Screening Dashboard")
+        st.title("UK Energy Infrastructure Intelligence Platform")
         st.write(
             """
-            Search, filter, map and compare UK renewable energy projects.
-            Generate project briefs, shortlist opportunities and test simplified offshore wind assumptions.
+            A UK renewable project screening dashboard for exploring planning data,
+            live grid context, regional opportunity, project risk and offshore wind feasibility.
             """
         )
 
-    with header_right:
         search_query = st.text_input(
             "Search projects",
             placeholder="Search Dogger Bank, solar, Scotland, battery...",
         )
+
+    with header_right:
+        if HERO_IMAGE.exists():
+            st.image(HERO_IMAGE, use_container_width=True)
 
         stat_col1, stat_col2 = st.columns(2)
 
@@ -731,6 +744,26 @@ with st.container(border=True):
 
         with stat_col2:
             st.metric("Dataset snapshot", latest_dataset_snapshot_text)
+
+visual_col1, visual_col2, visual_col3 = st.columns(3)
+
+with visual_col1:
+    if PLANNING_IMAGE.exists():
+        st.image(PLANNING_IMAGE, use_container_width=True)
+    st.markdown("**Planning Data**")
+    st.caption("Search, filter and compare UK renewable energy planning records.")
+
+with visual_col2:
+    if GRID_IMAGE.exists():
+        st.image(GRID_IMAGE, use_container_width=True)
+    st.markdown("**Live Grid Context**")
+    st.caption("Add near-live carbon intensity and generation mix context.")
+
+with visual_col3:
+    if OFFSHORE_IMAGE.exists():
+        st.image(OFFSHORE_IMAGE, use_container_width=True)
+    st.markdown("**Offshore Model**")
+    st.caption("Estimate generation, revenue, payback and carbon savings.")
 
 # ---------------------------------------------------
 # FILTERS
@@ -1791,7 +1824,7 @@ The screening score is a simplified indicator based on capacity, development sta
 technology type and data completeness. The risk level is a simple heuristic based on
 project maturity, scale, data completeness and infrastructure complexity.
 
-Generated using the UK Renewable Project Screening Dashboard.
+Generated using the UK Energy Infrastructure Intelligence Platform.
 """
 
     st.download_button(
@@ -2233,15 +2266,8 @@ with footer_col1:
         """
     )
 
-with footer_col2:
-    st.markdown(
-        """
-        **Focus**  
-        Renewable infrastructure screening, project comparison and offshore wind feasibility.
-        """
-    )
 
-with footer_col3:
+with footer_col2:
     st.markdown(
         f"""
         **Code**  
@@ -2250,5 +2276,5 @@ with footer_col3:
     )
 
 st.caption(
-    "Educational portfolio project only. Not an investment-grade renewable energy model."
+    "Educational portfolio project only."
 )
