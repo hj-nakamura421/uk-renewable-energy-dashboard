@@ -2,6 +2,7 @@ from pathlib import Path
 
 import pandas as pd
 import plotly.express as px
+import requests
 import streamlit as st
 from pyproj import Transformer
 
@@ -10,7 +11,7 @@ from pyproj import Transformer
 # ---------------------------------------------------
 
 st.set_page_config(
-    page_title="Renewable Project Screening Studio",
+    page_title="UK Renewable Project Screening Dashboard",
     page_icon="⚡",
     layout="wide",
 )
@@ -205,7 +206,7 @@ st.markdown(
 )
 
 # ---------------------------------------------------
-# FUNCTIONS
+# DATA LOADING
 # ---------------------------------------------------
 
 
@@ -255,45 +256,129 @@ def load_data() -> pd.DataFrame:
     return data
 
 
-def calculate_screening_score(row: pd.Series) -> int:
-    score = 0
+# ---------------------------------------------------
+# LIVE GRID DATA
+# ---------------------------------------------------
 
+
+def fetch_json(url: str):
+    response = requests.get(
+        url,
+        headers={
+            "Accept": "application/json",
+            "User-Agent": "renewable-project-screening-dashboard",
+        },
+        timeout=8,
+    )
+
+    response.raise_for_status()
+    return response.json()
+
+
+@st.cache_data(ttl=300)
+def get_live_grid_context():
+    try:
+        intensity_payload = fetch_json("https://api.carbonintensity.org.uk/intensity")
+        generation_payload = fetch_json("https://api.carbonintensity.org.uk/generation")
+
+        intensity_record = intensity_payload.get("data", [{}])[0]
+        intensity_info = intensity_record.get("intensity", {})
+
+        actual_intensity = intensity_info.get("actual")
+        forecast_intensity = intensity_info.get("forecast")
+        intensity_value = actual_intensity if actual_intensity is not None else forecast_intensity
+
+        intensity_index = intensity_info.get("index", "N/A")
+        period_from = intensity_record.get("from", "N/A")
+        period_to = intensity_record.get("to", "N/A")
+
+        generation_mix_items = (
+            generation_payload
+            .get("data", {})
+            .get("generationmix", [])
+        )
+
+        generation_mix = {
+            item.get("fuel", "unknown"): item.get("perc", 0)
+            for item in generation_mix_items
+        }
+
+        renewable_fuels = ["wind", "solar", "hydro", "biomass"]
+        renewable_share = sum(generation_mix.get(fuel, 0) for fuel in renewable_fuels)
+
+        if generation_mix:
+            dominant_fuel = max(generation_mix.items(), key=lambda item: item[1])[0]
+        else:
+            dominant_fuel = "N/A"
+
+        return {
+            "available": True,
+            "intensity": intensity_value,
+            "index": intensity_index,
+            "from": period_from,
+            "to": period_to,
+            "generation_mix": generation_mix,
+            "renewable_share": renewable_share,
+            "dominant_fuel": dominant_fuel,
+            "error": None,
+        }
+
+    except (requests.RequestException, ValueError, KeyError, IndexError) as error:
+        return {
+            "available": False,
+            "intensity": None,
+            "index": "N/A",
+            "from": "N/A",
+            "to": "N/A",
+            "generation_mix": {},
+            "renewable_share": None,
+            "dominant_fuel": "N/A",
+            "error": str(error),
+        }
+
+
+# ---------------------------------------------------
+# SCORING AND RISK
+# ---------------------------------------------------
+
+
+def score_breakdown(row: pd.Series) -> dict:
     capacity = row.get("Installed Capacity (MWelec)", 0)
     status = str(row.get("Development Status (short)", "")).lower()
     technology = str(row.get("Technology Type", "")).lower()
 
     if capacity >= 1000:
-        score += 35
+        capacity_score = 35
     elif capacity >= 500:
-        score += 28
+        capacity_score = 28
     elif capacity >= 100:
-        score += 20
+        capacity_score = 20
     elif capacity >= 20:
-        score += 12
+        capacity_score = 12
     else:
-        score += 5
+        capacity_score = 5
 
     if "operational" in status:
-        score += 35
+        planning_score = 35
     elif "construction" in status:
-        score += 30
+        planning_score = 30
     elif "planning granted" in status:
-        score += 25
+        planning_score = 25
     elif "planning" in status:
-        score += 15
+        planning_score = 15
     else:
-        score += 8
+        planning_score = 8
 
     if "wind offshore" in technology:
-        score += 20
+        technology_score = 20
     elif "battery" in technology or "storage" in technology:
-        score += 18
+        technology_score = 18
     elif "solar" in technology:
-        score += 15
+        technology_score = 15
     elif "wind onshore" in technology:
-        score += 15
+        technology_score = 15
     else:
-        score += 10
+        technology_score = 10
 
     useful_fields = [
         "Operator (or Applicant)",
@@ -308,9 +393,72 @@ def calculate_screening_score(row: pd.Series) -> int:
         for field in useful_fields
     )
 
-    score += min(10, completed_fields * 2)
+    data_score = min(10, completed_fields * 2)
 
-    return min(score, 100)
+    return {
+        "Capacity scale": capacity_score,
+        "Planning maturity": planning_score,
+        "Technology relevance": technology_score,
+        "Data confidence": data_score,
+    }
+
+
+def calculate_screening_score(row: pd.Series) -> int:
+    return min(sum(score_breakdown(row).values()), 100)
+
+
+def project_risk(row: pd.Series) -> tuple[str, str]:
+    status = str(row.get("Development Status (short)", "")).lower()
+    capacity = row.get("Installed Capacity (MWelec)", 0)
+    planning_ref = str(row.get("Planning Application Reference", "")).strip()
+    technology = str(row.get("Technology Type", "")).lower()
+
+    reasons = []
+    risk_points = 0
+
+    if "operational" in status:
+        risk_points += 0
+        reasons.append("Operational project")
+    elif "construction" in status:
+        risk_points += 1
+        reasons.append("Already under construction")
+    elif "planning granted" in status:
+        risk_points += 2
+        reasons.append("Planning granted but not operational")
+    elif "planning" in status:
+        risk_points += 3
+        reasons.append("Still in planning")
+    else:
+        risk_points += 4
+        reasons.append("Early or unclear development stage")
+
+    if capacity >= 1000:
+        risk_points += 2
+        reasons.append("Very large capacity project")
+    elif capacity >= 300:
+        risk_points += 1
+        reasons.append("Large project scale")
+
+    if not planning_ref or planning_ref.lower() == "nan":
+        risk_points += 1
+        reasons.append("Missing planning reference")
+
+    if "wind offshore" in technology:
+        risk_points += 1
+        reasons.append("Offshore infrastructure complexity")
+
+    if risk_points <= 2:
+        return "Low", "; ".join(reasons)
+
+    if risk_points <= 5:
+        return "Medium", "; ".join(reasons)
+
+    return "High", "; ".join(reasons)
+
+
+# ---------------------------------------------------
+# HELPERS
+# ---------------------------------------------------
 
 
 def polish_chart(fig, height=420):
@@ -358,6 +506,79 @@ def top_capacity_table(
     )
 
 
+def regional_opportunity_table(data: pd.DataFrame) -> pd.DataFrame:
+    working = data.copy()
+    working["Region"] = working["Region"].fillna("Unknown")
+
+    base = (
+        working.groupby("Region")
+        .agg(
+            Projects=("Site Name", "count"),
+            Total_Capacity_MW=("Installed Capacity (MWelec)", "sum"),
+            Average_Screening_Score=("Screening Score", "mean"),
+        )
+        .reset_index()
+    )
+
+    offshore = (
+        working[
+            working["Technology Type"]
+            .astype(str)
+            .str.contains("Wind Offshore", case=False, na=False)
+        ]
+        .groupby("Region")["Installed Capacity (MWelec)"]
+        .sum()
+    )
+
+    construction = (
+        working[
+            working["Development Status (short)"]
+            .astype(str)
+            .str.contains("construction", case=False, na=False)
+        ]
+        .groupby("Region")["Installed Capacity (MWelec)"]
+        .sum()
+    )
+
+    operational = (
+        working[
+            working["Development Status (short)"]
+            .astype(str)
+            .str.contains("operational", case=False, na=False)
+        ]
+        .groupby("Region")["Installed Capacity (MWelec)"]
+        .sum()
+    )
+
+    base["Offshore_Capacity_MW"] = base["Region"].map(offshore).fillna(0)
+    base["Under_Construction_Capacity_MW"] = base["Region"].map(construction).fillna(0)
+    base["Operational_Capacity_MW"] = base["Region"].map(operational).fillna(0)
+
+    max_total = base["Total_Capacity_MW"].max() or 1
+    max_construction = base["Under_Construction_Capacity_MW"].max() or 1
+    max_offshore = base["Offshore_Capacity_MW"].max() or 1
+
+    base["Opportunity_Index"] = (
+        0.40 * (base["Total_Capacity_MW"] / max_total * 100)
+        + 0.25 * base["Average_Screening_Score"]
+        + 0.20 * (base["Under_Construction_Capacity_MW"] / max_construction * 100)
+        + 0.15 * (base["Offshore_Capacity_MW"] / max_offshore * 100)
+    )
+
+    display = base.rename(
+        columns={
+            "Total_Capacity_MW": "Total capacity (MW)",
+            "Average_Screening_Score": "Average screening score",
+            "Offshore_Capacity_MW": "Offshore capacity (MW)",
+            "Under_Construction_Capacity_MW": "Under construction capacity (MW)",
+            "Operational_Capacity_MW": "Operational capacity (MW)",
+            "Opportunity_Index": "Opportunity index",
+        }
+    )
+
+    return display.sort_values("Opportunity index", ascending=False)
+
+
 def safe_filename(name: str) -> str:
     return (
         name.replace("/", "-")
@@ -395,6 +616,74 @@ def apply_search(data: pd.DataFrame, query: str) -> pd.DataFrame:
     return data[search_text.str.contains(query.lower(), na=False)].copy()
 
 
+def display_opportunity_table(title: str, data: pd.DataFrame):
+    st.subheader(title)
+
+    if data.empty:
+        st.write("No projects available for this category under the current filters.")
+        return
+
+    columns = [
+        "Site Name",
+        "Technology Type",
+        "Installed Capacity (MWelec)",
+        "Region",
+        "Development Status (short)",
+        "Screening Score",
+        "Risk Level",
+    ]
+
+    available_columns = [col for col in columns if col in data.columns]
+
+    st.dataframe(
+        data[available_columns],
+        use_container_width=True,
+        hide_index=True,
+    )
+
+
+def build_scenario_results(project_capacity: float, scenario_df: pd.DataFrame) -> pd.DataFrame:
+    results = scenario_df.copy()
+
+    numeric_columns = [
+        "Capacity factor",
+        "Electricity price (£/MWh)",
+        "CAPEX (£m/MW)",
+        "Lifetime (years)",
+        "Grid carbon intensity (kgCO₂e/kWh)",
+    ]
+
+    for column in numeric_columns:
+        results[column] = pd.to_numeric(results[column], errors="coerce")
+
+    results["Annual energy (MWh)"] = (
+        project_capacity * results["Capacity factor"] * 8760
+    )
+
+    results["Annual revenue (£m)"] = (
+        results["Annual energy (MWh)"] * results["Electricity price (£/MWh)"]
+    ) / 1_000_000
+
+    results["CAPEX (£bn)"] = (
+        project_capacity * results["CAPEX (£m/MW)"]
+    ) / 1000
+
+    results["Simple payback (years)"] = (
+        results["CAPEX (£bn)"] * 1000
+    ) / results["Annual revenue (£m)"]
+
+    results["Lifetime revenue (£bn)"] = (
+        results["Annual revenue (£m)"] * results["Lifetime (years)"]
+    ) / 1000
+
+    results["Annual carbon savings (tCO₂e)"] = (
+        results["Annual energy (MWh)"]
+        * results["Grid carbon intensity (kgCO₂e/kWh)"]
+    )
+
+    return results
+
+
 # ---------------------------------------------------
 # LOAD DATA
 # ---------------------------------------------------
@@ -406,12 +695,12 @@ except Exception as e:
     st.code(str(e))
     st.stop()
 
-latest_dataset_update_text = "N/A"
+latest_dataset_snapshot_text = "N/A"
 
 if "Record Last Updated Parsed" in df.columns:
-    latest_dataset_update = df["Record Last Updated Parsed"].max()
-    if pd.notna(latest_dataset_update):
-        latest_dataset_update_text = latest_dataset_update.strftime("%d %b %Y")
+    latest_dataset_snapshot = df["Record Last Updated Parsed"].max()
+    if pd.notna(latest_dataset_snapshot):
+        latest_dataset_snapshot_text = latest_dataset_snapshot.strftime("%d %b %Y")
 
 # ---------------------------------------------------
 # HEADER
@@ -424,9 +713,8 @@ with st.container(border=True):
         st.title("UK Renewable Project Screening Dashboard")
         st.write(
             """
-            An interactive UK renewable energy dashboard for exploring renewable energy planning data,
-            screening infrastructure projects, mapping project locations, comparing regional capacity
-            and modelling offshore wind feasibility.
+            Search, filter, map and compare UK renewable energy projects.
+            Generate project briefs, shortlist opportunities and test simplified offshore wind assumptions.
             """
         )
 
@@ -442,7 +730,7 @@ with st.container(border=True):
             st.metric("Dataset records", f"{len(df):,}")
 
         with stat_col2:
-            st.metric("Latest update", latest_dataset_update_text)
+            st.metric("Dataset snapshot", latest_dataset_snapshot_text)
 
 # ---------------------------------------------------
 # FILTERS
@@ -511,6 +799,10 @@ filtered_df["Screening Score"] = filtered_df.apply(
     axis=1,
 )
 
+risk_results = filtered_df.apply(project_risk, axis=1)
+filtered_df["Risk Level"] = risk_results.apply(lambda item: item[0])
+filtered_df["Risk Reason"] = risk_results.apply(lambda item: item[1])
+
 active_filters = []
 
 if search_query.strip():
@@ -537,13 +829,13 @@ else:
 total_capacity = filtered_df["Installed Capacity (MWelec)"].sum()
 avg_capacity = filtered_df["Installed Capacity (MWelec)"].mean()
 
-latest_update_text = "N/A"
+dataset_snapshot_text = "N/A"
 
 if "Record Last Updated Parsed" in filtered_df.columns:
-    latest_update = filtered_df["Record Last Updated Parsed"].max()
+    filtered_snapshot = filtered_df["Record Last Updated Parsed"].max()
 
-    if pd.notna(latest_update):
-        latest_update_text = latest_update.strftime("%d %b %Y")
+    if pd.notna(filtered_snapshot):
+        dataset_snapshot_text = filtered_snapshot.strftime("%d %b %Y")
 
 largest_project_row = filtered_df.sort_values(
     "Installed Capacity (MWelec)",
@@ -582,12 +874,27 @@ top_10_share = top_10_capacity / total_capacity * 100 if total_capacity else 0
 
 st.subheader("Explore")
 
-overview_tab, pipeline_tab, map_tab, briefs_tab, offshore_tab, methodology_tab = st.tabs(
+(
+    overview_tab,
+    live_grid_tab,
+    regional_tab,
+    pipeline_tab,
+    map_tab,
+    shortlist_tab,
+    briefs_tab,
+    compare_tab,
+    offshore_tab,
+    methodology_tab,
+) = st.tabs(
     [
         "Overview",
+        "Live Grid",
+        "Regional Ranking",
         "Pipeline",
         "Map",
+        "Shortlist",
         "Briefs",
+        "Compare",
         "Offshore Model",
         "Methodology",
     ]
@@ -612,7 +919,7 @@ with overview_tab:
         st.metric("Average Capacity", f"{avg_capacity:,.1f} MW")
 
     with metric_col4:
-        st.metric("Latest Update", latest_update_text)
+        st.metric("Dataset Snapshot", dataset_snapshot_text)
 
     st.subheader("Key insights")
 
@@ -633,6 +940,63 @@ with overview_tab:
         at **{largest_project_capacity:,.0f} MW**.
         """
     )
+
+    st.subheader("Quick answers")
+
+    quick_question = st.selectbox(
+        "Choose a quick question",
+        [
+            "Which projects score highest?",
+            "Which region has the largest capacity?",
+            "Which offshore wind projects are largest?",
+            "Which projects are under construction?",
+        ],
+    )
+
+    if quick_question == "Which projects score highest?":
+        quick_answer_df = (
+            filtered_df
+            .sort_values(
+                ["Screening Score", "Installed Capacity (MWelec)"],
+                ascending=[False, False],
+            )
+            .head(10)
+        )
+
+        display_opportunity_table("Highest-scoring projects", quick_answer_df)
+
+    elif quick_question == "Which region has the largest capacity?":
+        region_capacity = top_capacity_table(filtered_df, "Region", n=10)
+
+        st.dataframe(
+            region_capacity,
+            use_container_width=True,
+            hide_index=True,
+        )
+
+    elif quick_question == "Which offshore wind projects are largest?":
+        quick_answer_df = filtered_df[
+            filtered_df["Technology Type"]
+            .astype(str)
+            .str.contains("Wind Offshore", case=False, na=False)
+        ].sort_values(
+            "Installed Capacity (MWelec)",
+            ascending=False,
+        ).head(10)
+
+        display_opportunity_table("Largest offshore wind projects", quick_answer_df)
+
+    else:
+        quick_answer_df = filtered_df[
+            filtered_df["Development Status (short)"]
+            .astype(str)
+            .str.contains("construction", case=False, na=False)
+        ].sort_values(
+            "Installed Capacity (MWelec)",
+            ascending=False,
+        ).head(10)
+
+        display_opportunity_table("Largest projects under construction", quick_answer_df)
 
     chart_col1, chart_col2 = st.columns(2)
 
@@ -688,6 +1052,172 @@ with overview_tab:
             config={"displayModeBar": False},
         )
 
+    st.subheader("Top opportunities")
+
+    top_score_projects = (
+        filtered_df
+        .sort_values(
+            ["Screening Score", "Installed Capacity (MWelec)"],
+            ascending=[False, False],
+        )
+        .head(10)
+    )
+
+    display_opportunity_table("Highest-scoring projects", top_score_projects)
+
+    opportunity_col1, opportunity_col2 = st.columns(2)
+
+    with opportunity_col1:
+        construction_projects = filtered_df[
+            filtered_df["Development Status (short)"]
+            .astype(str)
+            .str.contains("construction", case=False, na=False)
+        ].sort_values(
+            "Installed Capacity (MWelec)",
+            ascending=False,
+        ).head(10)
+
+        display_opportunity_table("Largest projects under construction", construction_projects)
+
+    with opportunity_col2:
+        offshore_projects = filtered_df[
+            filtered_df["Technology Type"]
+            .astype(str)
+            .str.contains("Wind Offshore", case=False, na=False)
+        ].sort_values(
+            "Installed Capacity (MWelec)",
+            ascending=False,
+        ).head(10)
+
+        display_opportunity_table("Largest offshore wind projects", offshore_projects)
+
+# ---------------------------------------------------
+# LIVE GRID CONTEXT
+# ---------------------------------------------------
+
+with live_grid_tab:
+    st.header("Live Grid Context")
+
+    st.write(
+        """
+        The renewable project database is a planning dataset, so it is not live every second.
+        This section adds near-live GB grid context using carbon intensity and generation mix data.
+        """
+    )
+
+    if st.button("Refresh live grid context"):
+        get_live_grid_context.clear()
+
+    grid_context = get_live_grid_context()
+
+    if not grid_context["available"]:
+        st.warning(
+            "Live grid data is temporarily unavailable. The rest of the dashboard still works normally."
+        )
+
+        if grid_context["error"]:
+            with st.expander("Technical error details"):
+                st.caption(grid_context["error"])
+
+    else:
+        grid_col1, grid_col2, grid_col3, grid_col4 = st.columns(4)
+
+        with grid_col1:
+            st.metric(
+                "GB carbon intensity",
+                f"{grid_context['intensity']} gCO₂/kWh",
+            )
+
+        with grid_col2:
+            st.metric(
+                "Carbon intensity index",
+                str(grid_context["index"]).title(),
+            )
+
+        with grid_col3:
+            st.metric(
+                "Renewable share",
+                f"{grid_context['renewable_share']:.1f}%",
+            )
+
+        with grid_col4:
+            st.metric(
+                "Dominant fuel",
+                str(grid_context["dominant_fuel"]).title(),
+            )
+
+        st.caption(
+            f"Grid period · {grid_context['from']} to {grid_context['to']}"
+        )
+
+        generation_mix = grid_context["generation_mix"]
+
+        if generation_mix:
+            mix_df = pd.DataFrame(
+                {
+                    "Fuel": list(generation_mix.keys()),
+                    "Share (%)": list(generation_mix.values()),
+                }
+            ).sort_values("Share (%)", ascending=True)
+
+            fig_mix = px.bar(
+                mix_df,
+                x="Share (%)",
+                y="Fuel",
+                orientation="h",
+                labels={
+                    "Share (%)": "Generation share (%)",
+                    "Fuel": "",
+                },
+            )
+
+            st.plotly_chart(
+                polish_chart(fig_mix, height=430),
+                use_container_width=True,
+                config={"displayModeBar": False},
+            )
+
+# ---------------------------------------------------
+# REGIONAL RANKING
+# ---------------------------------------------------
+
+with regional_tab:
+    st.header("Regional opportunity ranking")
+
+    st.write(
+        """
+        This section ranks regions by project capacity, average screening score,
+        offshore capacity and under-construction pipeline.
+        """
+    )
+
+    regional_df = regional_opportunity_table(filtered_df)
+
+    st.dataframe(
+        regional_df,
+        use_container_width=True,
+        hide_index=True,
+    )
+
+    chart_df = regional_df.head(10).sort_values("Opportunity index", ascending=True)
+
+    fig_regional = px.bar(
+        chart_df,
+        x="Opportunity index",
+        y="Region",
+        orientation="h",
+        labels={
+            "Opportunity index": "Opportunity index",
+            "Region": "",
+        },
+    )
+
+    st.plotly_chart(
+        polish_chart(fig_regional, height=430),
+        use_container_width=True,
+        config={"displayModeBar": False},
+    )
+
 # ---------------------------------------------------
 # PIPELINE
 # ---------------------------------------------------
@@ -712,6 +1242,8 @@ with pipeline_tab:
         "County",
         "Planning Authority",
         "Screening Score",
+        "Risk Level",
+        "Risk Reason",
     ]
 
     available_display_columns = [
@@ -721,6 +1253,7 @@ with pipeline_tab:
     st.dataframe(
         filtered_df[available_display_columns].head(250),
         use_container_width=True,
+        hide_index=True,
     )
 
     st.caption(
@@ -751,12 +1284,13 @@ with pipeline_tab:
                 "Region",
                 "Development Status (short)",
                 "Screening Score",
+                "Risk Level",
             ]
         ]
         .head(10)
     )
 
-    st.dataframe(top_projects, use_container_width=True)
+    st.dataframe(top_projects, use_container_width=True, hide_index=True)
 
     chart_col1, chart_col2 = st.columns(2)
 
@@ -845,6 +1379,22 @@ with map_tab:
         st.warning("No valid coordinates are available for the current filters.")
 
     else:
+        map_scope = st.radio(
+            "Map density",
+            [
+                "Top 500 by capacity",
+                "All visible projects",
+            ],
+            horizontal=True,
+        )
+
+        if map_scope == "Top 500 by capacity":
+            map_df = (
+                map_df
+                .sort_values("Installed Capacity (MWelec)", ascending=False)
+                .head(500)
+            )
+
         fig_map = px.scatter_mapbox(
             map_df,
             lat="Latitude",
@@ -858,6 +1408,7 @@ with map_tab:
                 "Region",
                 "Development Status (short)",
                 "Screening Score",
+                "Risk Level",
             ],
             zoom=4,
             height=680,
@@ -882,6 +1433,147 @@ with map_tab:
                 ],
             },
         )
+
+# ---------------------------------------------------
+# SHORTLIST
+# ---------------------------------------------------
+
+with shortlist_tab:
+    st.header("Project shortlist")
+
+    st.write(
+        """
+        Build a mini portfolio of projects, then download the shortlist for further review.
+        """
+    )
+
+    project_options = sorted(filtered_df["Site Name"].dropna().unique())
+
+    default_shortlist = (
+        filtered_df
+        .sort_values(
+            ["Screening Score", "Installed Capacity (MWelec)"],
+            ascending=[False, False],
+        )
+        .head(5)["Site Name"]
+        .dropna()
+        .tolist()
+    )
+
+    selected_shortlist = st.multiselect(
+        "Choose projects to shortlist",
+        project_options,
+        default=default_shortlist,
+    )
+
+    shortlist_df = filtered_df[
+        filtered_df["Site Name"].isin(selected_shortlist)
+    ].copy()
+
+    if shortlist_df.empty:
+        st.info("Select at least one project to build a shortlist.")
+
+    else:
+        shortlist_col1, shortlist_col2, shortlist_col3 = st.columns(3)
+
+        with shortlist_col1:
+            st.metric("Shortlisted projects", f"{len(shortlist_df):,}")
+
+        with shortlist_col2:
+            st.metric(
+                "Shortlist capacity",
+                f"{shortlist_df['Installed Capacity (MWelec)'].sum():,.0f} MW",
+            )
+
+        with shortlist_col3:
+            st.metric(
+                "Average score",
+                f"{shortlist_df['Screening Score'].mean():,.1f}/100",
+            )
+
+        shortlist_display_columns = [
+            "Site Name",
+            "Technology Type",
+            "Installed Capacity (MWelec)",
+            "Region",
+            "Development Status (short)",
+            "Screening Score",
+            "Risk Level",
+            "Risk Reason",
+        ]
+
+        available_shortlist_columns = [
+            col for col in shortlist_display_columns if col in shortlist_df.columns
+        ]
+
+        st.dataframe(
+            shortlist_df[available_shortlist_columns],
+            use_container_width=True,
+            hide_index=True,
+        )
+
+        shortlist_csv = shortlist_df.to_csv(index=False).encode("utf-8")
+
+        st.download_button(
+            label="Download shortlist",
+            data=shortlist_csv,
+            file_name="renewable_project_shortlist.csv",
+            mime="text/csv",
+        )
+
+        shortlist_chart_col1, shortlist_chart_col2 = st.columns(2)
+
+        with shortlist_chart_col1:
+            st.subheader("Shortlist by technology")
+
+            shortlist_tech = top_capacity_table(shortlist_df, "Technology Type", n=10)
+            shortlist_tech = shortlist_tech.sort_values(
+                "Installed Capacity (MWelec)",
+                ascending=True,
+            )
+
+            fig_shortlist_tech = px.bar(
+                shortlist_tech,
+                x="Installed Capacity (MWelec)",
+                y="Technology Type",
+                orientation="h",
+                labels={
+                    "Installed Capacity (MWelec)": "Capacity (MW)",
+                    "Technology Type": "",
+                },
+            )
+
+            st.plotly_chart(
+                polish_chart(fig_shortlist_tech, height=360),
+                use_container_width=True,
+                config={"displayModeBar": False},
+            )
+
+        with shortlist_chart_col2:
+            st.subheader("Shortlist by region")
+
+            shortlist_region = top_capacity_table(shortlist_df, "Region", n=10)
+            shortlist_region = shortlist_region.sort_values(
+                "Installed Capacity (MWelec)",
+                ascending=True,
+            )
+
+            fig_shortlist_region = px.bar(
+                shortlist_region,
+                x="Installed Capacity (MWelec)",
+                y="Region",
+                orientation="h",
+                labels={
+                    "Installed Capacity (MWelec)": "Capacity (MW)",
+                    "Region": "",
+                },
+            )
+
+            st.plotly_chart(
+                polish_chart(fig_shortlist_region, height=360),
+                use_container_width=True,
+                config={"displayModeBar": False},
+            )
 
 # ---------------------------------------------------
 # BRIEFS
@@ -923,6 +1615,50 @@ with briefs_tab:
             "Screening Score",
             f"{report_row.get('Screening Score', 0):.0f}/100",
         )
+
+    risk_level = report_row.get("Risk Level", "N/A")
+    risk_reason = report_row.get("Risk Reason", "N/A")
+
+    st.subheader("Risk view")
+
+    risk_col1, risk_col2 = st.columns([0.4, 1])
+
+    with risk_col1:
+        st.metric("Risk level", risk_level)
+
+    with risk_col2:
+        st.write(risk_reason)
+
+    st.subheader("Score breakdown")
+
+    breakdown = score_breakdown(report_row)
+
+    breakdown_df = pd.DataFrame(
+        {
+            "Score component": breakdown.keys(),
+            "Score": breakdown.values(),
+            "Maximum": [35, 35, 20, 10],
+        }
+    )
+
+    st.dataframe(breakdown_df, use_container_width=True, hide_index=True)
+
+    fig_breakdown = px.bar(
+        breakdown_df,
+        x="Score",
+        y="Score component",
+        orientation="h",
+        labels={
+            "Score": "Score",
+            "Score component": "",
+        },
+    )
+
+    st.plotly_chart(
+        polish_chart(fig_breakdown, height=300),
+        use_container_width=True,
+        config={"displayModeBar": False},
+    )
 
     st.subheader("Project details")
 
@@ -985,10 +1721,27 @@ with briefs_tab:
                     "Region",
                     "Development Status (short)",
                     "Screening Score",
+                    "Risk Level",
                 ]
             ],
             use_container_width=True,
+            hide_index=True,
         )
+
+    comparable_text = ""
+
+    if not comparable_projects.empty:
+        comparable_text = comparable_projects[
+            [
+                "Site Name",
+                "Technology Type",
+                "Installed Capacity (MWelec)",
+                "Region",
+                "Development Status (short)",
+                "Screening Score",
+                "Risk Level",
+            ]
+        ].to_string(index=False)
 
     report_text = f"""
 Renewable Project Brief
@@ -996,21 +1749,30 @@ Renewable Project Brief
 
 Project: {selected_report_project}
 
-1. Project Overview
--------------------
+1. Executive Summary
+--------------------
 Technology: {report_row.get("Technology Type", "N/A")}
 Installed Capacity: {report_row.get("Installed Capacity (MWelec)", "N/A")} MW
 Development Status: {report_row.get("Development Status (short)", "N/A")}
 Screening Score: {report_row.get("Screening Score", "N/A")}/100
+Risk Level: {risk_level}
+Risk Reason: {risk_reason}
 
-2. Developer and Location
+2. Score Breakdown
+------------------
+Capacity scale: {breakdown["Capacity scale"]}/35
+Planning maturity: {breakdown["Planning maturity"]}/35
+Technology relevance: {breakdown["Technology relevance"]}/20
+Data confidence: {breakdown["Data confidence"]}/10
+
+3. Developer and Location
 -------------------------
 Operator / Applicant: {report_row.get("Operator (or Applicant)", "N/A")}
 Region: {report_row.get("Region", "N/A")}
 County: {report_row.get("County", "N/A")}
 Country: {report_row.get("Country", "N/A")}
 
-3. Planning Information
+4. Planning Information
 -----------------------
 Planning Authority: {report_row.get("Planning Authority", "N/A")}
 Planning Application Reference: {report_row.get("Planning Application Reference", "N/A")}
@@ -1018,21 +1780,125 @@ Planning Submitted: {report_row.get("Planning Application Submitted", "N/A")}
 Planning Granted: {report_row.get("Planning Permission  Granted", "N/A")}
 Operational Date: {report_row.get("Operational", "N/A")}
 
-4. Interpretation
+5. Comparable Projects
+----------------------
+{comparable_text if comparable_text else "No close comparable projects found under the current filters."}
+
+6. Interpretation
 -----------------
 This brief provides an early-stage screening summary based on public project data.
 The screening score is a simplified indicator based on capacity, development stage,
-technology type and data completeness.
+technology type and data completeness. The risk level is a simple heuristic based on
+project maturity, scale, data completeness and infrastructure complexity.
 
-Generated using the Renewable Project Screening Studio.
+Generated using the UK Renewable Project Screening Dashboard.
 """
 
     st.download_button(
-        label="Download project brief",
+        label="Download project brief (.txt)",
         data=report_text,
         file_name=f"{safe_filename(selected_report_project)}_project_brief.txt",
         mime="text/plain",
     )
+
+# ---------------------------------------------------
+# COMPARE PROJECTS
+# ---------------------------------------------------
+
+with compare_tab:
+    st.header("Compare projects")
+
+    project_options = sorted(filtered_df["Site Name"].dropna().unique())
+
+    if len(project_options) < 2:
+        st.info("At least two projects are needed for comparison.")
+    else:
+        compare_col1, compare_col2 = st.columns(2)
+
+        with compare_col1:
+            project_a_name = st.selectbox(
+                "Project A",
+                project_options,
+                key="compare_project_a",
+            )
+
+        with compare_col2:
+            project_b_name = st.selectbox(
+                "Project B",
+                project_options,
+                index=1,
+                key="compare_project_b",
+            )
+
+        project_a = filtered_df[filtered_df["Site Name"] == project_a_name].iloc[0]
+        project_b = filtered_df[filtered_df["Site Name"] == project_b_name].iloc[0]
+
+        comparison_df = pd.DataFrame(
+            {
+                "Metric": [
+                    "Technology",
+                    "Capacity (MW)",
+                    "Development stage",
+                    "Region",
+                    "Operator / Applicant",
+                    "Screening score",
+                    "Risk level",
+                    "Risk reason",
+                ],
+                project_a_name: [
+                    project_a.get("Technology Type", "N/A"),
+                    project_a.get("Installed Capacity (MWelec)", "N/A"),
+                    project_a.get("Development Status (short)", "N/A"),
+                    project_a.get("Region", "N/A"),
+                    project_a.get("Operator (or Applicant)", "N/A"),
+                    project_a.get("Screening Score", "N/A"),
+                    project_a.get("Risk Level", "N/A"),
+                    project_a.get("Risk Reason", "N/A"),
+                ],
+                project_b_name: [
+                    project_b.get("Technology Type", "N/A"),
+                    project_b.get("Installed Capacity (MWelec)", "N/A"),
+                    project_b.get("Development Status (short)", "N/A"),
+                    project_b.get("Region", "N/A"),
+                    project_b.get("Operator (or Applicant)", "N/A"),
+                    project_b.get("Screening Score", "N/A"),
+                    project_b.get("Risk Level", "N/A"),
+                    project_b.get("Risk Reason", "N/A"),
+                ],
+            }
+        )
+
+        st.dataframe(comparison_df, use_container_width=True, hide_index=True)
+
+        score_comparison = pd.DataFrame(
+            {
+                "Project": [project_a_name, project_b_name],
+                "Screening score": [
+                    project_a.get("Screening Score", 0),
+                    project_b.get("Screening Score", 0),
+                ],
+                "Capacity (MW)": [
+                    project_a.get("Installed Capacity (MWelec)", 0),
+                    project_b.get("Installed Capacity (MWelec)", 0),
+                ],
+            }
+        )
+
+        fig_compare_score = px.bar(
+            score_comparison,
+            x="Project",
+            y="Screening score",
+            labels={
+                "Project": "",
+                "Screening score": "Screening score",
+            },
+        )
+
+        st.plotly_chart(
+            polish_chart(fig_compare_score, height=360),
+            use_container_width=True,
+            config={"displayModeBar": False},
+        )
 
 # ---------------------------------------------------
 # OFFSHORE MODEL
@@ -1080,7 +1946,63 @@ with offshore_tab:
         with selected_col3:
             st.metric("Region", project_row.get("Region", "N/A"))
 
-        st.subheader("Assumptions")
+        st.subheader("Scenario assumptions")
+
+        default_scenarios = pd.DataFrame(
+            {
+                "Scenario": ["Conservative", "Base", "Optimistic"],
+                "Capacity factor": [0.38, 0.45, 0.52],
+                "Electricity price (£/MWh)": [55, 70, 90],
+                "CAPEX (£m/MW)": [3.6, 3.0, 2.6],
+                "Lifetime (years)": [25, 25, 30],
+                "Grid carbon intensity (kgCO₂e/kWh)": [0.16, 0.20, 0.24],
+            }
+        )
+
+        scenario_inputs = st.data_editor(
+            default_scenarios,
+            use_container_width=True,
+            hide_index=True,
+            num_rows="fixed",
+        )
+
+        scenario_results = build_scenario_results(project_capacity, scenario_inputs)
+
+        st.subheader("Scenario results")
+
+        result_display_columns = [
+            "Scenario",
+            "Annual energy (MWh)",
+            "Annual revenue (£m)",
+            "CAPEX (£bn)",
+            "Simple payback (years)",
+            "Lifetime revenue (£bn)",
+            "Annual carbon savings (tCO₂e)",
+        ]
+
+        st.dataframe(
+            scenario_results[result_display_columns],
+            use_container_width=True,
+            hide_index=True,
+        )
+
+        fig_scenario_payback = px.bar(
+            scenario_results,
+            x="Scenario",
+            y="Simple payback (years)",
+            labels={
+                "Scenario": "",
+                "Simple payback (years)": "Simple payback (years)",
+            },
+        )
+
+        st.plotly_chart(
+            polish_chart(fig_scenario_payback, height=360),
+            use_container_width=True,
+            config={"displayModeBar": False},
+        )
+
+        st.subheader("Single-case quick calculator")
 
         ass_col1, ass_col2, ass_col3 = st.columns(3)
 
@@ -1155,7 +2077,7 @@ with offshore_tab:
             annual_carbon_savings_tonnes * lifetime
         )
 
-        st.subheader("Calculated results")
+        st.subheader("Single-case calculated results")
 
         result_col1, result_col2, result_col3 = st.columns(3)
 
@@ -1199,41 +2121,6 @@ with offshore_tab:
                 f"{lifetime_carbon_savings_tonnes:,.0f} tonnes CO₂e",
             )
 
-        st.subheader("Sensitivity analysis")
-
-        sensitivity_rows = []
-
-        for cf in [0.35, 0.40, 0.45, 0.50, 0.55]:
-            energy = project_capacity * cf * 8760
-            revenue = energy * electricity_price
-            payback = total_capex / revenue
-
-            sensitivity_rows.append(
-                {
-                    "Capacity factor": cf,
-                    "Annual energy (MWh)": energy,
-                    "Annual revenue (£m)": revenue / 1_000_000,
-                    "Simple payback (years)": payback,
-                }
-            )
-
-        sensitivity_df = pd.DataFrame(sensitivity_rows)
-
-        st.dataframe(sensitivity_df, use_container_width=True)
-
-        fig_sensitivity = px.line(
-            sensitivity_df,
-            x="Capacity factor",
-            y="Simple payback (years)",
-            markers=True,
-        )
-
-        st.plotly_chart(
-            polish_chart(fig_sensitivity, height=380),
-            use_container_width=True,
-            config={"displayModeBar": False},
-        )
-
 # ---------------------------------------------------
 # METHODOLOGY
 # ---------------------------------------------------
@@ -1244,8 +2131,8 @@ with methodology_tab:
     st.write(
         """
         This project is a simplified renewable infrastructure screening tool.
-        It demonstrates data cleaning, visualisation, geospatial mapping and basic
-        techno-economic analysis.
+        It demonstrates data cleaning, visualisation, geospatial mapping, live grid context,
+        regional ranking, project shortlisting, explainable scoring and basic techno-economic analysis.
         """
     )
 
@@ -1265,8 +2152,43 @@ with methodology_tab:
 
     st.markdown(
         """
-        Each project receives a simplified score out of 100 based on installed capacity,
-        development status, technology type and completeness of key project information.
+        Each project receives a simplified score out of 100 based on:
+
+        - capacity scale
+        - planning maturity
+        - technology relevance
+        - data confidence
+
+        This score is an early-stage screening indicator, not an investment recommendation.
+        """
+    )
+
+    st.subheader("Risk level")
+
+    st.markdown(
+        """
+        Risk level is a simplified heuristic based on development status, project scale,
+        missing planning information and offshore infrastructure complexity.
+        """
+    )
+
+    st.subheader("Regional opportunity index")
+
+    st.markdown(
+        """
+        The regional opportunity index combines total regional capacity, average screening score,
+        under-construction capacity and offshore wind capacity. It is intended for comparative
+        screening, not formal investment ranking.
+        """
+    )
+
+    st.subheader("Live grid context")
+
+    st.markdown(
+        """
+        The live grid section uses current GB carbon intensity and generation mix data.
+        This provides near-live context, while the renewable planning database remains a
+        static planning dataset snapshot.
         """
     )
 
@@ -1311,8 +2233,15 @@ with footer_col1:
         """
     )
 
-
 with footer_col2:
+    st.markdown(
+        """
+        **Focus**  
+        Renewable infrastructure screening, project comparison and offshore wind feasibility.
+        """
+    )
+
+with footer_col3:
     st.markdown(
         f"""
         **Code**  
@@ -1321,5 +2250,5 @@ with footer_col2:
     )
 
 st.caption(
-    "Educational portfolio project only."
+    "Educational portfolio project only. Not an investment-grade renewable energy model."
 )
