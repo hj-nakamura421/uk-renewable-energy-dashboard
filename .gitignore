@@ -1,16 +1,11 @@
-# Python-generated files
-__pycache__/
-*.py[oc]
-build/
-dist/
-wheels/
-*.egg-info
-
-# Virtual environments
 .venv/
-
-# Mac system files
+__pycache__/
+*.pyc
 .DS_Store
+.streamlit/secrets.toml
+data/raw/repd/*
+!data/raw/repd/.gitkeep
 
-# Environment variables
-.env
+# Local repair and backup files
+*_before_*.py
+*_backup_*/

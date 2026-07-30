@@ -1,0 +1,204 @@
+{
+  "generated_at": "2026-07-29T09:53:03.917060+00:00",
+  "latest_snapshot": "2025-12-11",
+  "models": {
+    "2": {
+      "horizon_years": 2,
+      "train_rows": 16798,
+      "test_rows": 121,
+      "train_end": "2023-06-19",
+      "test_start": "2023-12-16",
+      "positive_rate_train": 0.019407072270508394,
+      "positive_rate_test": 1.0,
+      "roc_auc": null,
+      "brier_score": 0.2928925779599335,
+      "accuracy": 0.36363636363636365,
+      "precision": 1.0,
+      "recall": 0.36363636363636365,
+      "calibration": [
+        {
+          "mean_prediction": 0.2227,
+          "observed_rate": 1.0,
+          "count": 13
+        },
+        {
+          "mean_prediction": 0.3819,
+          "observed_rate": 1.0,
+          "count": 12
+        },
+        {
+          "mean_prediction": 0.4189,
+          "observed_rate": 1.0,
+          "count": 12
+        },
+        {
+          "mean_prediction": 0.4455,
+          "observed_rate": 1.0,
+          "count": 12
+        },
+        {
+          "mean_prediction": 0.466,
+          "observed_rate": 1.0,
+          "count": 12
+        },
+        {
+          "mean_prediction": 0.4829,
+          "observed_rate": 1.0,
+          "count": 12
+        },
+        {
+          "mean_prediction": 0.5029,
+          "observed_rate": 1.0,
+          "count": 12
+        },
+        {
+          "mean_prediction": 0.5332,
+          "observed_rate": 1.0,
+          "count": 12
+        },
+        {
+          "mean_prediction": 0.606,
+          "observed_rate": 1.0,
+          "count": 12
+        },
+        {
+          "mean_prediction": 0.7074,
+          "observed_rate": 1.0,
+          "count": 12
+        }
+      ]
+    },
+    "3": {
+      "horizon_years": 3,
+      "train_rows": 9914,
+      "test_rows": 121,
+      "train_end": "2023-06-19",
+      "test_start": "2023-12-16",
+      "positive_rate_train": 0.04438168246923543,
+      "positive_rate_test": 1.0,
+      "roc_auc": null,
+      "brier_score": 0.043325707161616024,
+      "accuracy": 0.9669421487603306,
+      "precision": 1.0,
+      "recall": 0.9669421487603306,
+      "calibration": [
+        {
+          "mean_prediction": 0.5358,
+          "observed_rate": 1.0,
+          "count": 13
+        },
+        {
+          "mean_prediction": 0.7601,
+          "observed_rate": 1.0,
+          "count": 12
+        },
+        {
+          "mean_prediction": 0.818,
+          "observed_rate": 1.0,
+          "count": 12
+        },
+        {
+          "mean_prediction": 0.8368,
+          "observed_rate": 1.0,
+          "count": 12
+        },
+        {
+          "mean_prediction": 0.8525,
+          "observed_rate": 1.0,
+          "count": 12
+        },
+        {
+          "mean_prediction": 0.8691,
+          "observed_rate": 1.0,
+          "count": 12
+        },
+        {
+          "mean_prediction": 0.8809,
+          "observed_rate": 1.0,
+          "count": 12
+        },
+        {
+          "mean_prediction": 0.8979,
+          "observed_rate": 1.0,
+          "count": 12
+        },
+        {
+          "mean_prediction": 0.9202,
+          "observed_rate": 1.0,
+          "count": 12
+        },
+        {
+          "mean_prediction": 0.9408,
+          "observed_rate": 1.0,
+          "count": 12
+        }
+      ]
+    },
+    "5": {
+      "horizon_years": 5,
+      "train_rows": 5246,
+      "test_rows": 121,
+      "train_end": "2023-06-19",
+      "test_start": "2023-12-16",
+      "positive_rate_train": 0.10255432710636675,
+      "positive_rate_test": 1.0,
+      "roc_auc": null,
+      "brier_score": 0.012879524438797503,
+      "accuracy": 0.9752066115702479,
+      "precision": 1.0,
+      "recall": 0.9752066115702479,
+      "calibration": [
+        {
+          "mean_prediction": 0.7594,
+          "observed_rate": 1.0,
+          "count": 13
+        },
+        {
+          "mean_prediction": 0.9894,
+          "observed_rate": 1.0,
+          "count": 12
+        },
+        {
+          "mean_prediction": 0.9928,
+          "observed_rate": 1.0,
+          "count": 12
+        },
+        {
+          "mean_prediction": 0.9943,
+          "observed_rate": 1.0,
+          "count": 12
+        },
+        {
+          "mean_prediction": 0.9957,
+          "observed_rate": 1.0,
+          "count": 12
+        },
+        {
+          "mean_prediction": 0.9971,
+          "observed_rate": 1.0,
+          "count": 12
+        },
+        {
+          "mean_prediction": 0.998,
+          "observed_rate": 1.0,
+          "count": 12
+        },
+        {
+          "mean_prediction": 0.9985,
+          "observed_rate": 1.0,
+          "count": 12
+        },
+        {
+          "mean_prediction": 0.9991,
+          "observed_rate": 1.0,
+          "count": 12
+        },
+        {
+          "mean_prediction": 0.9996,
+          "observed_rate": 1.0,
+          "count": 12
+        }
+      ]
+    }
+  }
+}
