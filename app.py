@@ -46,6 +46,80 @@ if selected_section != current_title:
         st.switch_page(forecasting)
 
 st.divider()
+# BEGIN SHARED NUMBER TYPOGRAPHY
+st.markdown(
+    '''
+    <style>
+    /*
+    Use the same number typography on Project Explorer and Forecasting.
+    This applies to header summary cards and all st.metric values.
+    */
+    [data-testid="stMetricValue"],
+    [data-testid="stMetricValue"] > div,
+    [data-testid="stMetricValue"] p,
+    [data-testid="stMetricValue"] span {
+        font-family: inherit !important;
+        font-size: clamp(1.65rem, 2vw, 2rem) !important;
+        font-weight: 650 !important;
+        line-height: 1.08 !important;
+        letter-spacing: -0.035em !important;
+        font-variant-numeric: tabular-nums lining-nums !important;
+    }
+
+    [data-testid="stMetricLabel"],
+    [data-testid="stMetricLabel"] p,
+    [data-testid="stMetricLabel"] span {
+        font-family: inherit !important;
+        font-size: 0.92rem !important;
+        font-weight: 560 !important;
+        line-height: 1.25 !important;
+        letter-spacing: -0.01em !important;
+    }
+    </style>
+    ''',
+    unsafe_allow_html=True,
+)
+# END SHARED NUMBER TYPOGRAPHY
+
+
+# BEGIN UNIFIED METRIC TYPOGRAPHY
+st.markdown(
+    '''
+    <style>
+    div[data-testid="stMetric"] div[data-testid="stMetricLabel"],
+    div[data-testid="stMetric"] div[data-testid="stMetricLabel"] *,
+    div[data-testid="stMetric"] div[data-testid="stMetricValue"],
+    div[data-testid="stMetric"] div[data-testid="stMetricValue"] * {
+        font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text",
+                     "Inter", "Segoe UI", sans-serif !important;
+    }
+
+    div[data-testid="stMetric"] div[data-testid="stMetricLabel"],
+    div[data-testid="stMetric"] div[data-testid="stMetricLabel"] * {
+        font-size: 0.86rem !important;
+        font-weight: 560 !important;
+        line-height: 1.25 !important;
+        letter-spacing: -0.01em !important;
+        color: #526158 !important;
+    }
+
+    div[data-testid="stMetric"] div[data-testid="stMetricValue"],
+    div[data-testid="stMetric"] div[data-testid="stMetricValue"] *,
+    div[data-testid="stMetric"] div[data-testid="stMetricValue"] p {
+        font-size: 1.62rem !important;
+        font-weight: 650 !important;
+        line-height: 1.08 !important;
+        letter-spacing: -0.035em !important;
+        color: #17221C !important;
+        font-variant-numeric: tabular-nums lining-nums !important;
+    }
+    </style>
+    ''',
+    unsafe_allow_html=True,
+)
+# END UNIFIED METRIC TYPOGRAPHY
+
+
 current_page.run()
 
 st.markdown(
@@ -56,11 +130,7 @@ st.markdown(
         display: none !important;
     }
 
-    [data-testid="stAppViewContainer"] > .main .block-container {
-        max-width: 1500px !important;
-        padding-top: 0 !important;
-        padding-bottom: 3rem !important;
-    }
+    
 
     .st-key-platform_top_navigation {
         position: relative !important;
@@ -116,14 +186,9 @@ st.markdown(
         min-height: 108px;
     }
 
-    [data-testid="stMetricLabel"] {
-        color: #526158 !important;
-    }
+    
 
-    [data-testid="stMetricValue"] {
-        color: #17221C !important;
-        letter-spacing: -0.03em !important;
-    }
+    
 
     [data-testid="stExpander"] {
         background: #FFFFFF !important;
@@ -194,3 +259,33 @@ st.markdown(
     ''',
     unsafe_allow_html=True,
 )
+
+# BEGIN SHARED PLATFORM WIDTH
+st.markdown(
+    '''
+    <style>
+    [data-testid="stMainBlockContainer"],
+    .stMainBlockContainer,
+    .block-container {
+        width: 100% !important;
+        max-width: none !important;
+        padding-left: 2.5rem !important;
+        padding-right: 2.5rem !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+    }
+
+    @media (max-width: 700px) {
+        [data-testid="stMainBlockContainer"],
+        .stMainBlockContainer,
+        .block-container {
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+        }
+    }
+    </style>
+    ''',
+    unsafe_allow_html=True,
+)
+# END SHARED PLATFORM WIDTH
+
