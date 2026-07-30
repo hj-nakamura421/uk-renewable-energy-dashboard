@@ -9,54 +9,60 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
+from shared_ui import render_portfolio_footer
+from src.scenario import Scenario, apply_scenario, scenario_summary
+
 PANEL_PATH = Path("data/processed/repd_panel.csv.gz")
 FORECAST_PATH = Path("data/processed/latest_forecasts.csv.gz")
 METRICS_PATH = Path("data/processed/model_metrics.json")
-GITHUB_URL = "https://github.com/hj-nakamura421/uk-renewable-energy-dashboard"
+QUALITY_PATH = Path("data/processed/data_quality_report.json")
+EXTERNAL_CONTEXT_PATH = Path("data/processed/external_context.csv")
+EXTERNAL_METADATA_PATH = Path("data/processed/external_metadata.json")
+
+MODEL_LABELS = {
+    "empirical_survival": "Empirical survival baseline",
+    "survival_logistic": "Logistic survival model",
+    "catboost_survival": "CatBoost AI challenger",
+    "historical_base_rate": "Historical base rate",
+}
+STATUS_LABELS = {
+    "promising": "Promising research model",
+    "experimental": "Experimental model",
+    "research_only": "Research-only forecast",
+}
 
 st.markdown(
     """
     <style>
-    .block-container {max-width: 1500px; padding-top: 1.6rem; padding-bottom: 3rem;}
     #MainMenu, footer {visibility: hidden;}
-    h1 {font-weight: 720; letter-spacing: -0.035em; line-height: 1.05;}
-    h2, h3 {letter-spacing: -0.018em;}
-    [data-testid="stMetric"] {
-        background: white; border: 1px solid #e4e9e5; border-radius: 18px;
-        padding: 1rem 1.1rem; box-shadow: 0 8px 24px rgba(10,40,25,.045);
+    .forecast-status {
+        border: 1px solid #D8E2DB;
+        border-radius: 16px;
+        padding: .85rem 1rem;
+        background: #F8FAF8;
+        margin: .35rem 0 1rem;
     }
-    [data-testid="stDataFrame"] {border: 1px solid #e4e9e5; border-radius: 16px; overflow: hidden;}
-    .stTabs [data-baseweb="tab-list"] {
-        gap: .35rem; background: white; border: 1px solid #e4e9e5;
-        border-radius: 16px; padding: .4rem; position: sticky; top: .4rem; z-index: 50;
+    .forecast-status strong {color: #17221C;}
+    .factor-positive, .factor-risk {
+        border-radius: 14px;
+        padding: .85rem 1rem;
+        min-height: 92px;
     }
-    .stTabs [data-baseweb="tab"] {border-radius: 12px; padding: .55rem .85rem;}
-    .stTabs [aria-selected="true"] {background: #17211c; color: white;}
-    
-    section[data-testid="stSidebar"],
-    [data-testid="collapsedControl"] {
-        display: none !important;
+    .factor-positive {
+        background: #F0F8F3;
+        border: 1px solid #CDE5D4;
     }
-    .forecast-meta {
-        display: flex;
-        flex-wrap: wrap;
-        gap: .65rem;
-        margin: 1rem 0 .55rem;
+    .factor-risk {
+        background: #FFF8ED;
+        border: 1px solid #F0DDB8;
     }
-    .forecast-meta span {
-        display: inline-flex;
-        align-items: baseline;
-        gap: .38rem;
-        padding: .48rem .72rem;
-        border: 1px solid #e1e7e2;
-        border-radius: 999px;
-        background: #f8faf8;
-        color: #56615a;
-        font-size: .92rem;
-    }
-    .forecast-meta strong {
-        color: #17211c;
-        font-weight: 650;
+    .factor-positive p, .factor-risk p {margin: 0;}
+    .source-card {
+        border: 1px solid #DDE5DF;
+        border-radius: 14px;
+        padding: .9rem 1rem;
+        background: #FFFFFF;
+        min-height: 134px;
     }
     </style>
     """,
@@ -65,55 +71,122 @@ st.markdown(
 
 
 @st.cache_data
-def load_data() -> tuple[pd.DataFrame, pd.DataFrame, dict]:
-    if not PANEL_PATH.exists() or not FORECAST_PATH.exists() or not METRICS_PATH.exists():
+def load_data() -> tuple[pd.DataFrame, pd.DataFrame, dict, dict, pd.DataFrame, dict]:
+    required = [
+        PANEL_PATH,
+        FORECAST_PATH,
+        METRICS_PATH,
+        QUALITY_PATH,
+        EXTERNAL_CONTEXT_PATH,
+        EXTERNAL_METADATA_PATH,
+    ]
+    missing = [str(path) for path in required if not path.exists()]
+    if missing:
         raise FileNotFoundError(
-            "Forecast files are missing. Run `python bootstrap.py` in Terminal first."
+            "Missing generated files: "
+            + ", ".join(missing)
+            + ". Run `uv run python bootstrap.py --skip-download`."
         )
     panel = pd.read_csv(PANEL_PATH, compression="gzip", low_memory=False)
     forecasts = pd.read_csv(FORECAST_PATH, compression="gzip", low_memory=False)
     for frame in (panel, forecasts):
         for column in (
-            "snapshot_date", "planning_submitted", "planning_granted",
-            "under_construction_date", "operational_date",
+            "snapshot_date",
+            "planning_submitted",
+            "planning_granted",
+            "under_construction_date",
+            "operational_date",
         ):
-            if column in frame.columns:
+            if column in frame:
                 frame[column] = pd.to_datetime(frame[column], errors="coerce")
     metrics = json.loads(METRICS_PATH.read_text(encoding="utf-8"))
-    return panel, forecasts, metrics
+    quality = json.loads(QUALITY_PATH.read_text(encoding="utf-8"))
+    external = pd.read_csv(EXTERNAL_CONTEXT_PATH)
+    external["date"] = pd.to_datetime(external["date"], errors="coerce")
+    external = external.dropna(subset=["date"]).sort_values("date")
+    external_metadata = json.loads(
+        EXTERNAL_METADATA_PATH.read_text(encoding="utf-8")
+    )
+    return panel, forecasts, metrics, quality, external, external_metadata
 
 
 def style_chart(figure: go.Figure, *, height: int = 430) -> go.Figure:
     figure.update_layout(
         template="plotly_white",
         height=height,
-        margin=dict(l=20, r=20, t=35, b=20),
+        margin=dict(l=20, r=20, t=45, b=20),
         paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="white",
-        font=dict(family="Arial, sans-serif", color="#17211c"),
+        plot_bgcolor="#FFFFFF",
+        font=dict(
+            family="-apple-system, BlinkMacSystemFont, Inter, Segoe UI, sans-serif",
+            color="#17221C",
+        ),
+        colorway=["#0E6B4F", "#7AAE92", "#D59C4A", "#5D7C6A", "#9AA69E"],
         legend_title_text="",
+        hoverlabel=dict(bgcolor="white"),
     )
-    figure.update_xaxes(gridcolor="#edf0ed", zeroline=False)
-    figure.update_yaxes(gridcolor="#edf0ed", zeroline=False)
+    figure.update_xaxes(gridcolor="#EDF1EE", zeroline=False)
+    figure.update_yaxes(gridcolor="#EDF1EE", zeroline=False)
     return figure
 
 
 def format_probability(value: float) -> str:
-    return "N/A" if pd.isna(value) else f"{100 * value:.1f}%"
+    return "N/A" if pd.isna(value) else f"{100 * float(value):.1f}%"
+
+
+def format_metric(value: float | None, digits: int = 3) -> str:
+    if value is None or pd.isna(value):
+        return "N/A"
+    return f"{float(value):.{digits}f}"
+
+
+def format_capacity(value: float | None, digits: int = 1) -> str:
+    if value is None or pd.isna(value):
+        return "Not reported"
+    return f"{float(value):,.{digits}f} MW"
+
+
+def project_brief(row: pd.Series, snapshot: pd.Timestamp) -> str:
+    lines = [
+        f"# {row.get('site_name', 'Unnamed project')}",
+        "",
+        f"Forecast snapshot: {snapshot:%d %B %Y}",
+        f"Developer / applicant: {row.get('operator', 'Unknown')}",
+        f"Technology: {row.get('technology', 'Unknown')}",
+        f"Region: {row.get('region', 'Unknown')}",
+        f"Stage: {row.get('stage', 'Unknown')}",
+        f"Capacity: {format_capacity(row.get('capacity_mw'))}",
+        "",
+        "## Time-to-operation forecast",
+        "",
+        f"- Within 2 years: {format_probability(row.get('prob_operational_2y'))}",
+        f"- Within 3 years: {format_probability(row.get('prob_operational_3y'))}",
+        f"- Within 5 years: {format_probability(row.get('prob_operational_5y'))}",
+        f"- Public-data confidence: {row.get('forecast_confidence', 'Low')}",
+        "",
+        "## Public-data signals",
+        "",
+        f"Positive: {row.get('positive_factors', '')}",
+        f"Risks: {row.get('risk_factors', '')}",
+        "",
+        "Forecasts are experimental research estimates based on public data and are "
+        "not investment advice.",
+    ]
+    return "\n".join(lines)
 
 
 try:
-    panel, forecasts, metrics = load_data()
+    panel, forecasts, metrics, quality, external, external_metadata = load_data()
 except Exception as exc:  # noqa: BLE001
-    st.error("The forecasting dataset has not been built yet.")
+    st.error("The forecasting package has not been generated correctly.")
     st.code(str(exc))
     st.markdown(
         """
-        Run these commands from the project folder:
+        From the project folder, run:
 
         ```bash
         uv sync
-        uv run python bootstrap.py
+        uv run python bootstrap.py --skip-download
         uv run streamlit run app.py
         ```
         """
@@ -121,209 +194,135 @@ except Exception as exc:  # noqa: BLE001
     st.stop()
 
 latest_snapshot = pd.Timestamp(forecasts["snapshot_date"].max())
-
-
-# ---------------------------------------------------
-# HEADER
-# ---------------------------------------------------
+release_status = metrics.get("release_status", "research_only")
+selected_model = metrics.get("selected_model", "empirical_survival")
 
 with st.container(border=True):
-    header_left, header_right = st.columns([1.8, 1])
-
+    header_left, header_right = st.columns([1.9, 1], vertical_alignment="top")
     with header_left:
-        st.title("UK Renewable Infrastructure Forecasting Platform")
+        st.title("UK Renewable Infrastructure Forecasting")
         st.write(
-            """
-            Explore historical project progression, compare current development pipelines
-            and estimate which UK renewable projects are most likely to become operational
-            within two, three or five years.
-            """
+            "Explore project histories, compare time-to-operation estimates and stress-test "
+            "the UK pipeline against economic, grid and policy scenarios."
         )
-
+        st.caption(
+            "This section models the active, non-operational pipeline. The complete "
+            "Project Explorer dataset and all of its screening tools remain unchanged."
+        )
         forecast_search = st.text_input(
             "Search projects",
-            placeholder="Search project, developer, technology or region...",
-            key="forecast_project_search",
+            placeholder="Search project, developer, technology or region…",
+            key="forecast_project_search_v2",
         )
-
     with header_right:
-        stat_col1, stat_col2 = st.columns(2)
-
-        with stat_col1:
+        a, b = st.columns(2)
+        with a:
             st.metric("Projects modelled", f"{len(forecasts):,}")
-
-        with stat_col2:
-            st.metric("Forecast snapshot", latest_snapshot.strftime("%d %b %Y"))
-
+        with b:
+            st.metric("Data snapshots", f"{metrics.get('snapshots', 0):,}")
         st.caption(
-            f"Built from {panel['snapshot_date'].nunique():,} historical dataset snapshots. "
-            "Forecasts are experimental probability estimates, not investment advice."
+            f"Forecast snapshot · {latest_snapshot:%d %b %Y}  \n"
+            f"Model v{metrics.get('model_version', '2.0.0')} · "
+            f"{STATUS_LABELS.get(release_status, release_status)}"
         )
 
-capability_col1, capability_col2, capability_col3 = st.columns(3)
-
-with capability_col1:
-    st.markdown("**Historical Intelligence**")
-    st.caption(
-        "Track project-entry, stage-progression and operational-capacity trends over time."
+if release_status == "research_only":
+    st.warning(
+        "The corrected backtests do not yet support decision-grade probabilities. "
+        "The transparent survival baseline is shown; the CatBoost AI challenger was "
+        "automatically rejected because it did not improve reliability consistently."
+    )
+elif release_status == "experimental":
+    st.info(
+        "These are experimental, time-based probability estimates. Use the Trust Centre "
+        "before relying on any individual forecast."
     )
 
-with capability_col2:
-    st.markdown("**Project Forecasts**")
-    st.caption(
-        "Estimate individual projects' probability of operation within two, three or five years."
-    )
-
-with capability_col3:
-    st.markdown("**Capacity Outlook**")
-    st.caption(
-        "Compare raw pipeline capacity with probability-weighted regional and technology forecasts."
-    )
-
-
-with st.expander("Advanced filters", expanded=False):
+with st.expander("Filters", expanded=False):
     filter_a, filter_b, filter_c, filter_d = st.columns(4)
     with filter_a:
         technology = st.multiselect(
             "Technology",
-            sorted(forecasts["technology"].dropna().unique()),
+            sorted(forecasts["technology"].dropna().astype(str).unique()),
         )
     with filter_b:
-        region = st.multiselect("Region", sorted(forecasts["region"].dropna().unique()))
+        region = st.multiselect(
+            "Region", sorted(forecasts["region"].dropna().astype(str).unique())
+        )
     with filter_c:
-        stage = st.multiselect("Current stage", sorted(forecasts["stage"].dropna().unique()))
+        stage = st.multiselect(
+            "Current stage",
+            sorted(forecasts["stage"].dropna().astype(str).unique()),
+        )
     with filter_d:
-        minimum_capacity = st.number_input("Minimum capacity (MW)", min_value=0.0, value=0.0, step=10.0)
-
-filtered = forecasts.copy()
-
-# BEGIN FORECAST SEARCH FILTER
-if forecast_search.strip():
-    search_term = forecast_search.strip()
-    searchable_columns = [
-        column
-        for column in ["site_name", "operator", "technology", "region", "stage"]
-        if column in filtered.columns
-    ]
-
-    search_mask = pd.Series(False, index=filtered.index)
-
-    for column in searchable_columns:
-        search_mask = search_mask | filtered[column].astype(str).str.contains(
-            search_term,
-            case=False,
-            na=False,
-            regex=False,
+        minimum_capacity = st.number_input(
+            "Minimum capacity (MW)",
+            min_value=0.0,
+            value=0.0,
+            step=10.0,
         )
 
-    filtered = filtered[search_mask]
-# END FORECAST SEARCH FILTER
+filtered = forecasts.copy()
+if forecast_search.strip():
+    term = forecast_search.strip()
+    search_columns = [
+        column
+        for column in ("site_name", "operator", "technology", "region", "stage")
+        if column in filtered
+    ]
+    mask = pd.Series(False, index=filtered.index)
+    for column in search_columns:
+        mask |= filtered[column].astype(str).str.contains(
+            term, case=False, na=False, regex=False
+        )
+    filtered = filtered[mask]
 if technology:
     filtered = filtered[filtered["technology"].isin(technology)]
 if region:
     filtered = filtered[filtered["region"].isin(region)]
 if stage:
     filtered = filtered[filtered["stage"].isin(stage)]
-filtered = filtered[filtered["capacity_mw"].fillna(0) >= minimum_capacity]
+filtered = filtered[
+    pd.to_numeric(filtered["capacity_mw"], errors="coerce").fillna(0)
+    >= minimum_capacity
+].copy()
 
 if filtered.empty:
     st.warning("No current projects match these filters.")
     st.stop()
 
-
-# BEGIN FORECAST ACTIVE VIEW
-active_filters = []
-
+active_view: list[str] = []
 if forecast_search.strip():
-    active_filters.append(f"Search: {forecast_search.strip()}")
-
+    active_view.append(f"Search: {forecast_search.strip()}")
 if technology:
-    technology_text = ", ".join(technology[:3])
-    if len(technology) > 3:
-        technology_text += "…"
-    active_filters.append(f"Technology: {technology_text}")
-
+    active_view.append("Technology: " + ", ".join(technology[:3]))
 if region:
-    region_text = ", ".join(region[:3])
-    if len(region) > 3:
-        region_text += "…"
-    active_filters.append(f"Region: {region_text}")
-
+    active_view.append("Region: " + ", ".join(region[:3]))
 if stage:
-    stage_text = ", ".join(stage[:3])
-    if len(stage) > 3:
-        stage_text += "…"
-    active_filters.append(f"Stage: {stage_text}")
+    active_view.append("Stage: " + ", ".join(stage[:3]))
+if minimum_capacity:
+    active_view.append(f"Minimum capacity: {minimum_capacity:,.0f} MW")
+st.caption("Active view · " + (" · ".join(active_view) if active_view else "All projects"))
 
-if minimum_capacity > 0:
-    active_filters.append(f"Minimum capacity: {minimum_capacity:,.0f} MW")
-
-if active_filters:
-    st.caption("Active view · " + " · ".join(active_filters))
-else:
-    st.caption("Active view · All current projects")
-
-st.subheader("Forecast")
-# END FORECAST ACTIVE VIEW
-
-(
-    executive_tab,
-    history_tab,
-    project_tab,
-    portfolio_tab,
-    map_tab,
-    validation_tab,
-    method_tab,
-) = st.tabs(
-    [
-        "Executive View",
-        "Historical Trends",
-        "Project Forecasts",
-        "Capacity Forecast",
-        "Map",
-        "Model Validation",
-        "Methodology",
-    ]
+overview_tab, project_tab, scenario_tab, history_tab, map_tab, trust_tab = st.tabs(
+    ["Overview", "Projects", "Scenario Lab", "History", "Map", "Trust Centre"]
 )
 
-with executive_tab:
+with overview_tab:
+    total_capacity = filtered["capacity_mw"].fillna(0).sum()
+    expected_3y = filtered["expected_capacity_3y_mw"].fillna(0).sum()
+    moderate_confidence = filtered["forecast_confidence"].eq("Moderate").mean()
     metric_1, metric_2, metric_3, metric_4 = st.columns(4)
     with metric_1:
         st.metric("Active projects", f"{len(filtered):,}")
     with metric_2:
-        st.metric("Pipeline capacity", f"{filtered['capacity_mw'].sum():,.0f} MW")
+        st.metric("Pipeline capacity", f"{total_capacity:,.0f} MW")
     with metric_3:
-        expected_3y = filtered.get("expected_capacity_3y_mw", pd.Series(0, index=filtered.index)).sum()
-        st.metric("Probability-weighted 3-year capacity", f"{expected_3y:,.0f} MW")
+        st.metric("3-year expected capacity", f"{expected_3y:,.0f} MW")
     with metric_4:
-        high_confidence = filtered.get("prob_operational_3y", pd.Series(0, index=filtered.index)).ge(0.7).sum()
-        st.metric("Projects above 70% (3-year)", f"{high_confidence:,}")
+        st.metric("Moderate-confidence records", f"{100 * moderate_confidence:.1f}%")
 
-    st.subheader("Highest-probability current projects")
-    top = filtered.sort_values(["prob_operational_3y", "capacity_mw"], ascending=False).head(20).copy()
-    top["3-year probability"] = top["prob_operational_3y"].map(format_probability)
-    top["5-year probability"] = top["prob_operational_5y"].map(format_probability)
-    st.dataframe(
-        top[
-            [
-                "site_name", "operator", "technology", "region", "stage", "capacity_mw",
-                "3-year probability", "5-year probability",
-            ]
-        ].rename(
-            columns={
-                "site_name": "Project",
-                "operator": "Developer / applicant",
-                "technology": "Technology",
-                "region": "Region",
-                "stage": "Stage",
-                "capacity_mw": "Capacity (MW)",
-            }
-        ),
-        use_container_width=True,
-        hide_index=True,
-    )
-
-    chart_left, chart_right = st.columns(2)
+    chart_left, chart_right = st.columns([1.35, 1])
     with chart_left:
         region_forecast = (
             filtered.groupby("region", dropna=False)
@@ -336,20 +335,361 @@ with executive_tab:
             .head(12)
             .sort_values("expected_3y_mw")
         )
-        fig = px.bar(region_forecast, x="expected_3y_mw", y="region", orientation="h")
-        fig.update_xaxes(title="Probability-weighted capacity (MW)")
-        fig.update_yaxes(title=None)
-        st.plotly_chart(style_chart(fig), use_container_width=True, config={"displayModeBar": False})
-    with chart_right:
-        tech_forecast = (
-            filtered.groupby("technology", dropna=False)["expected_capacity_3y_mw"]
-            .sum()
-            .reset_index()
-            .sort_values("expected_capacity_3y_mw", ascending=False)
-            .head(10)
+        fig = go.Figure()
+        fig.add_bar(
+            y=region_forecast["region"],
+            x=region_forecast["pipeline_mw"],
+            name="Raw pipeline",
+            orientation="h",
+            marker_color="#DDE8E1",
         )
-        fig = px.pie(tech_forecast, values="expected_capacity_3y_mw", names="technology", hole=0.55)
-        st.plotly_chart(style_chart(fig), use_container_width=True, config={"displayModeBar": False})
+        fig.add_bar(
+            y=region_forecast["region"],
+            x=region_forecast["expected_3y_mw"],
+            name="Probability-weighted",
+            orientation="h",
+            marker_color="#0E6B4F",
+        )
+        fig.update_layout(
+            barmode="overlay",
+            title="Where probability-weighted capacity is concentrated",
+        )
+        fig.update_xaxes(title="Capacity (MW)")
+        fig.update_yaxes(title=None)
+        st.plotly_chart(style_chart(fig, height=500), width="stretch")
+    with chart_right:
+        distribution = filtered[
+            ["prob_operational_3y", "stage"]
+        ].dropna()
+        fig = px.histogram(
+            distribution,
+            x="prob_operational_3y",
+            color="stage",
+            nbins=25,
+            labels={
+                "prob_operational_3y": "Probability of operation within 3 years",
+                "count": "Projects",
+                "stage": "Stage",
+            },
+            title="Forecast distribution by current stage",
+        )
+        fig.update_xaxes(tickformat=".0%")
+        st.plotly_chart(style_chart(fig, height=500), width="stretch")
+
+    st.subheader("Projects to review")
+    review = filtered.sort_values(
+        ["prob_operational_3y", "capacity_mw"], ascending=False
+    ).head(20).copy()
+    review["3-year forecast"] = review["prob_operational_3y"].map(format_probability)
+    st.dataframe(
+        review[
+            [
+                "site_name",
+                "operator",
+                "technology",
+                "region",
+                "stage",
+                "capacity_mw",
+                "3-year forecast",
+                "forecast_confidence",
+            ]
+        ].rename(
+            columns={
+                "site_name": "Project",
+                "operator": "Developer / applicant",
+                "technology": "Technology",
+                "region": "Region",
+                "stage": "Stage",
+                "capacity_mw": "Capacity (MW)",
+                "forecast_confidence": "Evidence confidence",
+            }
+        ),
+        width="stretch",
+        hide_index=True,
+    )
+
+with project_tab:
+    st.header("Project intelligence")
+    choices = filtered.sort_values(
+        ["site_name", "capacity_mw"], ascending=[True, False]
+    ).reset_index(drop=True)
+    selected_index = st.selectbox(
+        "Choose a project",
+        options=list(choices.index),
+        format_func=lambda index: (
+            f"{choices.loc[index, 'site_name']} · "
+            f"{choices.loc[index, 'region']} · "
+            f"{format_capacity(choices.loc[index, 'capacity_mw'], digits=0)}"
+        ),
+    )
+    selected = choices.loc[selected_index]
+
+    a, b, c, d = st.columns(4)
+    with a:
+        st.metric("Capacity", format_capacity(selected["capacity_mw"]))
+    with b:
+        st.metric(
+            "Within 2 years", format_probability(selected["prob_operational_2y"])
+        )
+    with c:
+        st.metric(
+            "Within 3 years", format_probability(selected["prob_operational_3y"])
+        )
+    with d:
+        st.metric(
+            "Within 5 years", format_probability(selected["prob_operational_5y"])
+        )
+
+    factor_left, factor_right = st.columns(2)
+    with factor_left:
+        st.markdown(
+            '<div class="factor-positive"><p><strong>Positive public-data signals</strong>'
+            f"<br>{selected.get('positive_factors', '')}</p></div>",
+            unsafe_allow_html=True,
+        )
+    with factor_right:
+        st.markdown(
+            '<div class="factor-risk"><p><strong>Risks and missing evidence</strong>'
+            f"<br>{selected.get('risk_factors', '')}</p></div>",
+            unsafe_allow_html=True,
+        )
+
+    detail_left, detail_right = st.columns([1.15, 1])
+    with detail_left:
+        curve = pd.DataFrame(
+            {
+                "Years": [2, 3, 5],
+                "Deployed forecast": [
+                    selected["prob_operational_2y"],
+                    selected["prob_operational_3y"],
+                    selected["prob_operational_5y"],
+                ],
+                "CatBoost challenger": [
+                    selected["ai_prob_operational_2y"],
+                    selected["ai_prob_operational_3y"],
+                    selected["ai_prob_operational_5y"],
+                ],
+            }
+        )
+        fig = go.Figure()
+        fig.add_scatter(
+            x=curve["Years"],
+            y=curve["Deployed forecast"],
+            mode="lines+markers",
+            name="Deployed survival baseline",
+            line=dict(color="#0E6B4F", width=4),
+        )
+        fig.add_scatter(
+            x=curve["Years"],
+            y=curve["CatBoost challenger"],
+            mode="lines+markers",
+            name="Rejected AI challenger",
+            line=dict(color="#C7954A", width=2, dash="dot"),
+        )
+        fig.update_layout(title="Probability of reaching operation")
+        fig.update_xaxes(title="Forecast horizon (years)", tickvals=[2, 3, 5])
+        fig.update_yaxes(title="Probability", tickformat=".0%", range=[0, 1])
+        st.plotly_chart(style_chart(fig), width="stretch")
+        st.caption(
+            "The CatBoost line is diagnostic only. It is not deployed because its "
+            "temporal-holdout reliability was worse."
+        )
+    with detail_right:
+        details = pd.DataFrame(
+            {
+                "Field": [
+                    "Developer / applicant",
+                    "Technology",
+                    "Region",
+                    "Country",
+                    "Current stage",
+                    "Planning authority",
+                    "Evidence confidence",
+                    "Historical observations",
+                ],
+                "Value": [
+                    selected.get("operator", ""),
+                    selected.get("technology", ""),
+                    selected.get("region", ""),
+                    selected.get("country", ""),
+                    selected.get("stage", ""),
+                    selected.get("planning_authority", ""),
+                    selected.get("forecast_confidence", ""),
+                    str(int(selected.get("observations_to_date", 0))),
+                ],
+            }
+        )
+        st.dataframe(details, width="stretch", hide_index=True)
+        brief = project_brief(selected, latest_snapshot)
+        st.download_button(
+            "Download project brief",
+            data=brief,
+            file_name=(
+                str(selected.get("site_name", "project"))
+                .replace("/", "-")
+                .replace(" ", "_")
+                + "_forecast.md"
+            ),
+            mime="text/markdown",
+            width="stretch",
+        )
+
+    project_history = panel[
+        panel["project_key"].eq(selected["project_key"])
+    ].sort_values("snapshot_date")
+    if not project_history.empty:
+        st.subheader("Observed history")
+        st.dataframe(
+            project_history[
+                ["snapshot_date", "stage", "capacity_mw", "status_short"]
+            ].drop_duplicates(),
+            width="stretch",
+            hide_index=True,
+        )
+
+with scenario_tab:
+    st.header("Economic and policy scenario lab")
+    st.write(
+        "Adjust external conditions to stress-test the published forecast. These effects "
+        "are explicit assumptions—not AI-generated facts or causal estimates."
+    )
+    latest_external = external.iloc[-1]
+    macro_1, macro_2, macro_3 = st.columns(3)
+    with macro_1:
+        st.metric(
+            "Bank Rate",
+            f"{latest_external.get('bank_rate_pct', np.nan):.2f}%",
+            help="Latest monthly Bank of England observation in the packaged context.",
+        )
+    with macro_2:
+        st.metric(
+            "UK CPI inflation",
+            f"{latest_external.get('cpi_annual_pct', np.nan):.1f}%",
+            help="ONS headline CPI annual rate.",
+        )
+    with macro_3:
+        st.metric(
+            "Infrastructure cost inflation",
+            f"{latest_external.get('construction_opi_annual_pct', np.nan):.1f}%",
+            help="ONS infrastructure Construction Output Price Index annual change.",
+        )
+
+    control_1, control_2, control_3 = st.columns(3)
+    with control_1:
+        bank_change = st.slider(
+            "Bank Rate change",
+            min_value=-3.0,
+            max_value=3.0,
+            value=0.0,
+            step=0.25,
+            format="%+.2f pp",
+        )
+        cost_change = st.slider(
+            "Construction-cost shock",
+            min_value=-20,
+            max_value=30,
+            value=0,
+            step=5,
+            format="%+d%%",
+        )
+    with control_2:
+        policy_regime = st.segmented_control(
+            "Policy environment",
+            options=["Restrictive", "Neutral", "Supportive"],
+            default="Neutral",
+            width="stretch",
+        )
+        grid_delay = st.slider(
+            "Additional grid delay",
+            min_value=0.0,
+            max_value=5.0,
+            value=0.0,
+            step=0.5,
+            format="%.1f years",
+        )
+    with control_3:
+        new_cfd = st.toggle(
+            "Assume new CfD support",
+            value=False,
+            help="Adds a bounded positive stress adjustment only to projects without recorded CfD support.",
+        )
+        st.caption(
+            "Early-stage and capital-intensive projects receive larger rate, cost and "
+            "grid-delay sensitivities."
+        )
+
+    scenario = Scenario(
+        bank_rate_change_pp=bank_change,
+        construction_cost_change_pct=float(cost_change),
+        policy_regime=policy_regime or "Neutral",
+        grid_delay_years=grid_delay,
+        new_cfd_support=new_cfd,
+    )
+    stressed = filtered.copy()
+    for horizon in (2, 3, 5):
+        stressed[f"scenario_prob_operational_{horizon}y"] = apply_scenario(
+            stressed,
+            f"prob_operational_{horizon}y",
+            scenario,
+        )
+        stressed[f"scenario_expected_{horizon}y_mw"] = (
+            stressed["capacity_mw"].fillna(0)
+            * stressed[f"scenario_prob_operational_{horizon}y"]
+        )
+
+    scenario_capacity = pd.DataFrame(
+        {
+            "Horizon": ["2 years", "3 years", "5 years"],
+            "Reference": [
+                stressed[f"expected_capacity_{horizon}y_mw"].sum()
+                for horizon in (2, 3, 5)
+            ],
+            "Scenario": [
+                stressed[f"scenario_expected_{horizon}y_mw"].sum()
+                for horizon in (2, 3, 5)
+            ],
+        }
+    )
+    base_3y = scenario_capacity.loc[1, "Reference"]
+    scenario_3y = scenario_capacity.loc[1, "Scenario"]
+    change_3y = scenario_3y - base_3y
+    s1, s2, s3 = st.columns(3)
+    with s1:
+        st.metric("Reference 3-year capacity", f"{base_3y:,.0f} MW")
+    with s2:
+        st.metric(
+            "Scenario 3-year capacity",
+            f"{scenario_3y:,.0f} MW",
+            delta=f"{change_3y:+,.0f} MW",
+        )
+    with s3:
+        st.metric(
+            "Scenario change",
+            format_probability(change_3y / base_3y if base_3y else np.nan),
+        )
+
+    melted = scenario_capacity.melt(
+        id_vars="Horizon",
+        var_name="Forecast",
+        value_name="Capacity (MW)",
+    )
+    fig = px.bar(
+        melted,
+        x="Horizon",
+        y="Capacity (MW)",
+        color="Forecast",
+        barmode="group",
+        title="Probability-weighted capacity under the selected scenario",
+        color_discrete_map={"Reference": "#9FB8A8", "Scenario": "#0E6B4F"},
+    )
+    st.plotly_chart(style_chart(fig), width="stretch")
+    st.caption(" · ".join(scenario_summary(scenario)))
+    st.info(
+        "The scenario layer adjusts log-odds using documented, bounded assumptions. "
+        f"It is deliberately separated from the trained model because "
+        f"{metrics.get('snapshots', 0)} REPD snapshots cannot identify reliable "
+        "inflation or political effects."
+    )
 
 with history_tab:
     st.header("Historical project progression")
@@ -358,8 +698,10 @@ with history_tab:
         history = history[history["technology"].isin(technology)]
     if region:
         history = history[history["region"].isin(region)]
-    history = history[history["capacity_mw"].fillna(0) >= minimum_capacity]
-
+    history = history[
+        pd.to_numeric(history["capacity_mw"], errors="coerce").fillna(0)
+        >= minimum_capacity
+    ]
     stage_history = (
         history.groupby(["snapshot_date", "stage"], dropna=False)["capacity_mw"]
         .sum()
@@ -370,140 +712,67 @@ with history_tab:
         x="snapshot_date",
         y="capacity_mw",
         color="stage",
-        labels={"snapshot_date": "Snapshot", "capacity_mw": "Capacity in database (MW)", "stage": "Stage"},
+        labels={
+            "snapshot_date": "Source snapshot",
+            "capacity_mw": "Capacity represented in REPD (MW)",
+            "stage": "Stage",
+        },
+        title="Capacity represented in each source snapshot",
     )
-    st.plotly_chart(style_chart(fig, height=500), use_container_width=True)
-
-    history_left, history_right = st.columns(2)
-    with history_left:
+    st.plotly_chart(style_chart(fig, height=520), width="stretch")
+    left, right = st.columns(2)
+    with left:
         new_projects = (
-            history.groupby("project_key")["snapshot_date"].min().reset_index()
-            .assign(period=lambda frame: frame["snapshot_date"].dt.to_period("Q").dt.to_timestamp())
-            .groupby("period").size().rename("new_projects").reset_index()
+            history.groupby("project_key")["snapshot_date"]
+            .min()
+            .reset_index()
+            .assign(
+                period=lambda frame: frame["snapshot_date"]
+                .dt.to_period("Q")
+                .dt.to_timestamp()
+            )
+            .groupby("period")
+            .size()
+            .rename("new_projects")
+            .reset_index()
         )
-        fig = px.bar(new_projects, x="period", y="new_projects")
-        fig.update_xaxes(title="Quarter first observed")
-        fig.update_yaxes(title="New projects")
-        st.plotly_chart(style_chart(fig), use_container_width=True, config={"displayModeBar": False})
-    with history_right:
+        fig = px.bar(
+            new_projects,
+            x="period",
+            y="new_projects",
+            title="Projects first observed by quarter",
+        )
+        st.plotly_chart(style_chart(fig), width="stretch")
+    with right:
         operational = history[history["stage"].eq("Operational")]
         first_operation = (
-            operational.groupby("project_key").agg(
+            operational.groupby("project_key")
+            .agg(
                 first_operational=("snapshot_date", "min"),
                 capacity_mw=("capacity_mw", "last"),
-            ).reset_index()
+            )
+            .reset_index()
         )
-        first_operation["period"] = first_operation["first_operational"].dt.to_period("Q").dt.to_timestamp()
-        commissioned = first_operation.groupby("period")["capacity_mw"].sum().reset_index()
-        fig = px.bar(commissioned, x="period", y="capacity_mw")
-        fig.update_xaxes(title="Quarter first observed operational")
-        fig.update_yaxes(title="Capacity reaching operation (MW)")
-        st.plotly_chart(style_chart(fig), use_container_width=True, config={"displayModeBar": False})
-
-    st.info(
-        "The REPD threshold fell from 1 MW to 150 kW in 2021. Treat apparent changes in small-project "
-        "counts across that boundary cautiously."
-    )
-
-with project_tab:
-    st.header("Project-level forecasts")
-    project_names = sorted(filtered["site_name"].fillna("Unnamed project").unique())
-    selected_name = st.selectbox("Select a current project", project_names)
-    selected = filtered[filtered["site_name"].eq(selected_name)].sort_values("capacity_mw", ascending=False).iloc[0]
-
-    a, b, c, d = st.columns(4)
-    with a:
-        st.metric("Capacity", f"{selected['capacity_mw']:,.1f} MW")
-    with b:
-        st.metric("2-year probability", format_probability(selected.get("prob_operational_2y", np.nan)))
-    with c:
-        st.metric("3-year probability", format_probability(selected.get("prob_operational_3y", np.nan)))
-    with d:
-        st.metric("5-year probability", format_probability(selected.get("prob_operational_5y", np.nan)))
-
-    details = pd.DataFrame(
-        {
-            "Field": ["Developer / applicant", "Technology", "Region", "Country", "Current stage", "Planning authority"],
-            "Value": [
-                selected.get("operator", ""), selected.get("technology", ""), selected.get("region", ""),
-                selected.get("country", ""), selected.get("stage", ""), selected.get("planning_authority", ""),
-            ],
-        }
-    )
-    st.dataframe(details, use_container_width=True, hide_index=True)
-
-    project_history = panel[panel["project_key"].eq(selected["project_key"])].sort_values("snapshot_date")
-    if not project_history.empty:
-        timeline = project_history[["snapshot_date", "stage", "capacity_mw", "status_short"]].drop_duplicates()
-        st.subheader("Observed project history")
-        st.dataframe(timeline, use_container_width=True, hide_index=True)
-
-    st.caption(
-        "The model estimates progression from patterns in earlier REPD snapshots. It does not know private "
-        "financing terms, detailed grid constraints or confidential developer information."
-    )
-
-with portfolio_tab:
-    st.header("Probability-weighted capacity forecast")
-    horizon = st.radio("Forecast horizon", [2, 3, 5], index=1, horizontal=True)
-    probability_column = f"prob_operational_{horizon}y"
-    expected_column = f"expected_capacity_{horizon}y_mw"
-
-    grouping = st.radio("Group by", ["Region", "Technology"], horizontal=True)
-    group_column = "region" if grouping == "Region" else "technology"
-    aggregate = (
-        filtered.groupby(group_column, dropna=False)
-        .agg(
-            projects=("project_key", "nunique"),
-            pipeline_capacity_mw=("capacity_mw", "sum"),
-            expected_capacity_mw=(expected_column, "sum"),
-            mean_probability=(probability_column, "mean"),
+        first_operation["period"] = (
+            first_operation["first_operational"].dt.to_period("Q").dt.to_timestamp()
         )
-        .reset_index()
-        .sort_values("expected_capacity_mw", ascending=False)
-    )
-    aggregate["conversion_ratio"] = aggregate["expected_capacity_mw"] / aggregate["pipeline_capacity_mw"].replace(0, np.nan)
-
-    chart_data = aggregate.head(15).sort_values("expected_capacity_mw")
-    fig = go.Figure()
-    fig.add_bar(
-        y=chart_data[group_column],
-        x=chart_data["pipeline_capacity_mw"],
-        name="Raw pipeline",
-        orientation="h",
-    )
-    fig.add_bar(
-        y=chart_data[group_column],
-        x=chart_data["expected_capacity_mw"],
-        name="Probability-weighted",
-        orientation="h",
-    )
-    fig.update_layout(barmode="overlay")
-    fig.update_xaxes(title="Capacity (MW)")
-    fig.update_yaxes(title=None)
-    st.plotly_chart(style_chart(fig, height=540), use_container_width=True)
-
-    display = aggregate.copy()
-    display["Mean probability"] = display["mean_probability"].map(format_probability)
-    display["Expected / pipeline"] = display["conversion_ratio"].map(format_probability)
-    st.dataframe(
-        display[
-            [group_column, "projects", "pipeline_capacity_mw", "expected_capacity_mw", "Mean probability", "Expected / pipeline"]
-        ].rename(
-            columns={
-                group_column: grouping,
-                "projects": "Projects",
-                "pipeline_capacity_mw": "Pipeline capacity (MW)",
-                "expected_capacity_mw": f"Expected within {horizon} years (MW)",
-            }
-        ),
-        use_container_width=True,
-        hide_index=True,
+        commissioned = (
+            first_operation.groupby("period")["capacity_mw"].sum().reset_index()
+        )
+        fig = px.bar(
+            commissioned,
+            x="period",
+            y="capacity_mw",
+            title="Capacity first observed operational",
+        )
+        st.plotly_chart(style_chart(fig), width="stretch")
+    st.warning(
+        "REPD's minimum threshold fell from 1 MW to 150 kW in 2021. Project-count "
+        "changes across that boundary are not directly comparable."
     )
 
 with map_tab:
     st.header("Current pipeline map")
-
     map_data = filtered.copy()
     numeric_columns = [
         "latitude",
@@ -511,39 +780,30 @@ with map_tab:
         "capacity_mw",
         "prob_operational_3y",
     ]
-
     for column in numeric_columns:
         map_data[column] = pd.to_numeric(map_data[column], errors="coerce")
-
     map_data[numeric_columns] = map_data[numeric_columns].replace(
-        [np.inf, -np.inf],
-        np.nan,
+        [np.inf, -np.inf], np.nan
     )
-
-    map_data = map_data.dropna(subset=numeric_columns).copy()
+    map_data = map_data.dropna(subset=numeric_columns)
     map_data = map_data[
         map_data["latitude"].between(49.0, 61.5)
         & map_data["longitude"].between(-9.5, 3.5)
         & map_data["capacity_mw"].ge(0)
     ].copy()
-
     if map_data.empty:
-        st.info(
-            "No projects with valid coordinates, capacity and forecast values "
-            "are available for these filters."
-        )
+        st.info("No mapped projects are available for this view.")
     else:
         map_data["marker_size"] = map_data["capacity_mw"].clip(lower=0)
-        map_data["3-year probability"] = map_data[
-            "prob_operational_3y"
-        ].map(format_probability)
-
+        map_data["3-year forecast"] = map_data["prob_operational_3y"].map(
+            format_probability
+        )
         fig = px.scatter_map(
             map_data,
             lat="latitude",
             lon="longitude",
             size="marker_size",
-            size_max=35,
+            size_max=34,
             color="prob_operational_3y",
             hover_name="site_name",
             hover_data={
@@ -551,7 +811,7 @@ with map_tab:
                 "region": True,
                 "stage": True,
                 "capacity_mw": ":,.1f",
-                "3-year probability": True,
+                "3-year forecast": True,
                 "latitude": False,
                 "longitude": False,
                 "prob_operational_3y": False,
@@ -560,7 +820,7 @@ with map_tab:
             color_continuous_scale="Viridis",
             range_color=(0, 1),
             zoom=4,
-            height=680,
+            height=700,
         )
         fig.update_layout(
             map_style="open-street-map",
@@ -568,84 +828,167 @@ with map_tab:
         )
         st.plotly_chart(
             fig,
-            use_container_width=True,
+            width="stretch",
             config={"scrollZoom": True, "displaylogo": False},
         )
 
-with validation_tab:
-    st.header("Time-based model validation")
-    model_rows: list[dict] = []
-    for horizon, values in metrics.get("models", {}).items():
-        model_rows.append(
-            {
-                "Horizon": f"{horizon} years",
-                "Training rows": values.get("train_rows"),
-                "Test rows": values.get("test_rows"),
-                "Training ends": values.get("train_end"),
-                "Testing starts": values.get("test_start"),
-                "ROC-AUC": values.get("roc_auc"),
-                "Brier score": values.get("brier_score"),
-                "Precision": values.get("precision"),
-                "Recall": values.get("recall"),
-            }
+with trust_tab:
+    st.header("Trust Centre")
+    trust_1, trust_2, trust_3, trust_4 = st.columns(4)
+    with trust_1:
+        st.metric("Panel rows", f"{metrics.get('panel_rows', 0):,}")
+    with trust_2:
+        st.metric("Projects linked", f"{metrics.get('projects', 0):,}")
+    with trust_3:
+        st.metric("Survival intervals", f"{metrics.get('survival_training_rows', 0):,}")
+    with trust_4:
+        st.metric(
+            "Release status",
+            STATUS_LABELS.get(release_status, release_status),
         )
-    validation = pd.DataFrame(model_rows)
-    st.dataframe(validation, use_container_width=True, hide_index=True)
 
-    selected_horizon = st.selectbox("Calibration chart", sorted(metrics.get("models", {}).keys(), key=int))
-    calibration = pd.DataFrame(metrics["models"][selected_horizon].get("calibration", []))
+    st.subheader("Temporal holdout results")
+    result_rows: list[dict] = []
+    for horizon, values in metrics.get("models", {}).items():
+        for candidate, scores in values.get("candidates", {}).items():
+            result_rows.append(
+                {
+                    "Horizon": f"{horizon} years",
+                    "Candidate": MODEL_LABELS.get(candidate, candidate),
+                    "ROC-AUC": scores.get("roc_auc"),
+                    "Average precision": scores.get("average_precision"),
+                    "Brier score": scores.get("brier_score"),
+                    "Mean prediction": scores.get("mean_prediction"),
+                    "Observed rate": values.get("positive_rate_test"),
+                    "Test rows": values.get("test_rows"),
+                }
+            )
+    validation = pd.DataFrame(result_rows)
+    st.dataframe(
+        validation,
+        width="stretch",
+        hide_index=True,
+        column_config={
+            "ROC-AUC": st.column_config.NumberColumn(format="%.3f"),
+            "Average precision": st.column_config.NumberColumn(format="%.3f"),
+            "Brier score": st.column_config.NumberColumn(format="%.3f"),
+            "Mean prediction": st.column_config.NumberColumn(format="percent"),
+            "Observed rate": st.column_config.NumberColumn(format="percent"),
+        },
+    )
+    st.caption(
+        "Lower Brier score is better. ROC-AUC near 0.5 indicates random ranking. "
+        "The model is not promoted merely because it is more complex."
+    )
+
+    horizon_choice = st.selectbox(
+        "Calibration view",
+        options=sorted(metrics.get("models", {}).keys(), key=int),
+        format_func=lambda value: f"{value}-year horizon",
+    )
+    calibration = pd.DataFrame(
+        metrics["models"][horizon_choice].get("calibration", [])
+    )
     if not calibration.empty:
         fig = go.Figure()
         fig.add_scatter(
-            x=[0, 1], y=[0, 1], mode="lines", name="Perfect calibration", line=dict(dash="dash")
+            x=[0, 1],
+            y=[0, 1],
+            mode="lines",
+            name="Perfect calibration",
+            line=dict(dash="dash", color="#9AA69E"),
         )
         fig.add_scatter(
             x=calibration["mean_prediction"],
             y=calibration["observed_rate"],
             mode="lines+markers",
-            name="Model",
-            marker=dict(size=np.sqrt(calibration["count"]) * 2),
+            name="Selected holdout candidate",
+            marker=dict(
+                size=np.maximum(np.sqrt(calibration["count"]) * 1.6, 7),
+                color="#0E6B4F",
+            ),
         )
-        fig.update_xaxes(title="Mean predicted probability", range=[0, 1])
-        fig.update_yaxes(title="Observed operation rate", range=[0, 1])
-        st.plotly_chart(style_chart(fig), use_container_width=True)
+        fig.update_layout(title="Reliability: predicted versus observed")
+        fig.update_xaxes(title="Mean predicted probability", tickformat=".0%")
+        fig.update_yaxes(title="Observed operation rate", tickformat=".0%")
+        st.plotly_chart(style_chart(fig), width="stretch")
 
-    st.warning(
-        "A good-looking probability is not enough. Use the time split, calibration curve and technology-level "
-        "error analysis before presenting the forecasts as decision-grade evidence."
+    st.subheader("Source-data quality")
+    quality_1, quality_2, quality_3 = st.columns(3)
+    with quality_1:
+        st.metric(
+            "Duplicate snapshot-project rows",
+            f"{quality.get('duplicate_snapshot_project_rows', 0):,}",
+        )
+    with quality_2:
+        st.metric(
+            "Fallback-key rate",
+            format_probability(quality.get("fallback_project_key_rate", 0)),
+        )
+    with quality_3:
+        st.metric("Independent snapshots", f"{quality.get('snapshots', 0):,}")
+    for issue in quality.get("issues", []):
+        message = (
+            f"**{issue.get('severity', '').title()} · {issue.get('check', '')}** — "
+            f"{issue.get('impact', '')} Evidence: {issue.get('evidence')}."
+        )
+        if issue.get("severity") in {"critical", "high"}:
+            st.warning(message)
+        else:
+            st.info(message)
+
+    st.subheader("Official external context")
+    source_columns = st.columns(3)
+    for column, source in zip(
+        source_columns,
+        external_metadata.get("sources", [])[:3],
+        strict=False,
+    ):
+        with column:
+            st.markdown(
+                '<div class="source-card">'
+                f"<strong>{source.get('name', '')}</strong><br>"
+                f"<small>{source.get('note', '')}</small><br><br>"
+                f"<a href=\"{source.get('url', '#')}\">Open official source</a>"
+                "</div>",
+                unsafe_allow_html=True,
+            )
+
+    with st.expander("Methodology and limitations", expanded=False):
+        st.markdown(
+            """
+            **Target.** The system estimates discrete annual time-to-operation hazard,
+            then combines those hazards into two-, three- and five-year cumulative
+            probabilities. Unresolved projects are right-censored instead of being
+            labelled as failures.
+
+            **Features.** Public information available at each snapshot includes capacity,
+            stage, time in stage, stage changes, capacity revisions, planning and
+            construction dates, CfD evidence, data completeness, developer track record,
+            and technology–region track record.
+
+            **Validation.** Test outcomes come only from fully observed historical
+            cohorts. Projects in each test cohort are removed from the corresponding
+            survival-training rows. Brier score, ROC-AUC, average precision and
+            reliability bins are reported.
+
+            **External conditions.** Bank Rate, CPI and infrastructure construction costs
+            are displayed from official sources. They are used in an explicitly labelled
+            scenario layer, not passed to the trained model while only 14 independent
+            REPD snapshots exist.
+
+            **Limitations.** Public data omit private finance, land, equipment contracts,
+            detailed grid studies and confidential delivery information. Entity matching
+            can be imperfect, and REPD coverage changed in 2021. Outputs are research and
+            portfolio work, not investment advice.
+            """
+        )
+
+    st.download_button(
+        "Download filtered forecast data",
+        data=filtered.to_csv(index=False),
+        file_name="uk_renewable_project_forecasts.csv",
+        mime="text/csv",
     )
-
-with method_tab:
-    st.header("Methodology and limitations")
-    st.markdown(
-        """
-        ### What the model predicts
-        Each baseline logistic-regression model estimates whether a currently non-operational project will first
-        appear as operational within a fixed **2-, 3- or 5-year horizon**.
-
-        ### Historical construction
-        Official REPD snapshots are standardised into a project–snapshot panel. Reference IDs and revised-application
-        links are used to join records over time. Each row contains only information visible at that snapshot.
-
-        ### Features
-        - technology, region, country and current stage
-        - installed capacity and project age
-        - planning-reference availability and planning/consent/construction indicators
-        - data-completeness score and CfD indicator where present
-
-        ### Back-testing
-        Training uses earlier snapshots and testing uses later snapshots. This reduces the risk of accidentally
-        training on information that would not have been available at the forecast date.
-
-        ### Important limitations
-        - REPD's minimum threshold changed from 1 MW to 150 kW in 2021.
-        - Historical field names and status definitions have changed.
-        - The model does not include private financing, detailed grid constraints, land agreements or supply-chain risk.
-        - Probability-weighted capacity is an expectation, not a promise that individual projects will be built.
-        - These outputs are research and portfolio work, not investment advice.
-        """
-    )
-
-from shared_ui import render_portfolio_footer
 
 render_portfolio_footer()

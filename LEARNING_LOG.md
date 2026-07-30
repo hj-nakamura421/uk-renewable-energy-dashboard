@@ -14,6 +14,11 @@ Through this project, I developed practical experience in:
 - simplified techno-economic modelling
 - technical documentation
 - dashboard design and presentation
+- survival-analysis concepts and right censoring
+- temporal validation and look-ahead leakage
+- rare-event probability calibration
+- challenger-model governance
+- automated testing and continuous integration
 
 ## Main Lessons
 
@@ -30,6 +35,9 @@ I learned how to:
 - document assumptions and limitations
 - deploy a working app online
 - use Git commits to save progress
+- distinguish model ranking from probability reliability
+- reject an AI challenger when holdout evidence does not support deployment
+- separate macroeconomic scenario assumptions from trained causal claims
 
 ## Key Technical Concepts
 
@@ -64,6 +72,10 @@ I should be able to explain:
 - how the screening score works
 - how the offshore wind model works
 - why the model is simplified
+- how the original validation became all-positive
+- how survival intervals repair unresolved labels
+- why Brier score matters for probability forecasts
+- why CatBoost is retained as a rejected challenger
 - what the project limitations are
 - what I would improve next
 

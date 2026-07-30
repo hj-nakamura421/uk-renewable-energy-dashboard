@@ -109,6 +109,22 @@ def read_snapshot(path: Path) -> pd.DataFrame:
         raise ValueError(f"Could not decode {path}")
 
     if suffix in {".xlsx", ".xls"}:
+        signature = path.read_bytes()[:8]
+        is_excel_container = signature.startswith(b"PK") or signature.startswith(
+            b"\xd0\xcf\x11\xe0"
+        )
+        if not is_excel_container:
+            for encoding in ("utf-8-sig", "utf-8", "cp1252", "latin1"):
+                try:
+                    frame = pd.read_csv(path, encoding=encoding, low_memory=False)
+                    if len(frame.columns) > 5:
+                        return frame
+                except UnicodeDecodeError:
+                    continue
+            raise ValueError(
+                f"{path} has an Excel extension but is neither a readable Excel "
+                "workbook nor a readable CSV file."
+            )
         sheet = _best_excel_sheet(path)
         header_row = _detect_header_row(path, sheet)
         return pd.read_excel(path, sheet_name=sheet, header=header_row)

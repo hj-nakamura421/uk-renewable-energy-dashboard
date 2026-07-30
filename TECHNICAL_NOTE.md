@@ -1,106 +1,60 @@
 # Technical Note
 
-## Tools Used
+## Stack
 
-- Python
+- Python 3.13
 - Streamlit
-- pandas
+- pandas and NumPy
 - Plotly
+- scikit-learn
+- CatBoost
 - pyproj
-- Git/GitHub
-- Streamlit Community Cloud
+- requests, Beautiful Soup and lxml
+- pytest and GitHub Actions
 
-## App Architecture
-
-```text
-CSV dataset
-→ pandas data loading
-→ data cleaning
-→ coordinate conversion
-→ sidebar filters
-→ project screening score
-→ charts, tables and map
-→ project brief generator
-→ offshore wind model
-→ deployed Streamlit app
-```
-
-## Main Components
-
-### Data Loading
-
-The app reads a local CSV file stored in the `data/` folder.
-
-The file path is:
+## Data path
 
 ```text
-data/renewable_projects.csv
+official files
+→ schema normalisation
+→ project entity linking
+→ project-snapshot panel
+→ data-quality checks
+→ leakage-safe feature engineering
+→ discrete-time survival intervals
+→ temporal model comparison
+→ current forecasts
+→ Streamlit Trust Centre and Scenario Lab
 ```
 
-The dataset is loaded using pandas.
+## Why survival modelling
 
-### Data Cleaning
+Many projects are unresolved when the historical panel ends. A binary
+classifier cannot safely call those projects failures at horizons that have not
+elapsed. Discrete-time survival rows represent only complete at-risk intervals
+and observed operations.
 
-The app converts installed capacity into numeric values and removes rows where installed capacity is missing.
+## Why CatBoost is a challenger
 
-It also converts coordinate columns into numeric values before mapping.
+CatBoost can model nonlinear categorical interactions, but the data decides
+whether it is used. The packaged release does not promote it because later
+cohort reliability is not consistently better than the transparent baseline.
 
-### Coordinate Conversion
+## Why macro effects are separate
 
-The dataset contains British National Grid coordinates.
+There are thousands of project rows but only 15 independent source dates.
+Duplicating one Bank Rate or inflation observation across thousands of rows does
+not create thousands of macro observations. External effects therefore power a
+transparent scenario tool rather than a falsely precise trained coefficient.
 
-The app uses `pyproj` to convert these coordinates from EPSG:27700 into latitude and longitude using EPSG:4326. This allows the projects to be plotted on an interactive map.
+## Quality controls
 
-### Filtering
-
-The sidebar filters allow the user to filter projects by:
-
-- technology type
-- development status
-- region
-
-All charts, tables, project reports and calculations update based on the selected filters.
-
-### Visualisation
-
-Plotly is used for:
-
-- capacity by technology charts
-- capacity by region charts
-- capacity by development stage charts
-- technology pipeline charts
-- interactive project map
-- sensitivity analysis chart
-
-### Project Screening Score
-
-The app calculates a simple score out of 100 for each project based on:
-
-- project capacity
-- development status
-- technology type
-- data completeness
-
-This helps compare projects quickly within the dashboard.
-
-### Offshore Wind Model
-
-The offshore wind model estimates annual generation, turbine count, revenue, CAPEX, payback period and carbon savings using simplified engineering assumptions.
-
-The assumptions can be changed using Streamlit sliders.
-
-### Deployment
-
-The app is deployed using Streamlit Community Cloud and version-controlled using Git/GitHub.
-
-## Possible Improvements
-
-Future improvements could include:
-
-- automatically updating the dataset from the latest source
-- generating PDF project briefs
-- adding more detailed cost modelling
-- adding planning-risk analysis
-- integrating live carbon intensity data
-- improving mobile layout
-- adding user authentication for private datasets
+- unique snapshot-project grain;
+- allowed project-stage domain;
+- non-negative capacity;
+- no future snapshot dates;
+- visible fallback entity-key rate;
+- fully observed evaluation cohorts;
+- test-project purging;
+- rare-event metrics;
+- automated label and scenario tests.

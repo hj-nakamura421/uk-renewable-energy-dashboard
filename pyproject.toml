@@ -1,11 +1,12 @@
 [project]
 name = "offshore-energy-dashboard"
-version = "0.1.0"
-description = "Add your description here"
+version = "0.2.0"
+description = "A leakage-aware UK renewable infrastructure intelligence and forecasting platform."
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "beautifulsoup4>=4.15.0",
+    "catboost>=1.2.8",
     "joblib>=1.5.3",
     "lxml>=6.1.1",
     "numpy>=2.4.6",
@@ -19,4 +20,9 @@ dependencies = [
     "scikit-learn>=1.9.0",
     "streamlit>=1.57.0",
     "xlrd>=2.0.2",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4.1",
 ]

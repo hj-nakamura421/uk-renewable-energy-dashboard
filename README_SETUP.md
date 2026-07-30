@@ -1,31 +1,37 @@
-# Minimal setup
+# Setup and rebuild guide
 
-## 1. Copy this folder into your existing GitHub project
-
-Keep a backup of the current `app.py` first.
-
-## 2. Install dependencies
+## Run the packaged application
 
 ```bash
 cd ~/Code/offshore-energy-dashboard
-uv add streamlit pandas numpy plotly requests beautifulsoup4 lxml openpyxl xlrd scikit-learn joblib pyproj
+uv sync
+uv run streamlit run app.py
 ```
 
-## 3. Build the historical dataset and models
+On macOS, `run_app.command` performs these steps when double-clicked.
+
+## Rebuild using the packaged historical panel
 
 ```bash
-uv run python bootstrap.py
+uv run python bootstrap.py --skip-download
 ```
 
-The script attempts to retrieve quarterly archived versions of the official GOV.UK REPD page through the Internet Archive, download the linked official government files, standardise them and train 2-, 3- and 5-year time-based models.
+This command:
 
-If archive retrieval is incomplete, manually download official historical REPD CSV/XLSX files and place them in:
+1. reuses `data/processed/repd_panel.csv.gz` when raw files are absent;
+2. regenerates the data-quality report;
+3. refreshes official ONS and Bank of England context;
+4. trains the empirical, logistic and CatBoost survival candidates;
+5. runs leakage-safe temporal holdouts;
+6. selects the most reliable candidate;
+7. writes the current forecast and model artifacts.
 
-```text
-data/raw/repd/
-```
+Use `--skip-external` to keep the packaged external-context file.
 
-Rename each file so it starts with its snapshot date, for example:
+## Rebuild from source REPD files
+
+Place official CSV/XLSX files in `data/raw/repd/`. Each filename should begin
+with the source date:
 
 ```text
 2024-01-31_repd.csv
@@ -38,30 +44,36 @@ Then run:
 uv run python bootstrap.py --skip-download
 ```
 
-## 4. Run the site
+To attempt archive discovery automatically:
 
 ```bash
-uv run streamlit run app.py
+uv run python bootstrap.py --frequency monthly
 ```
 
-## 5. Deploy
+Archive availability is not guaranteed, so the packaged processed panel is kept
+for reproducibility.
 
-Commit the processed files and models, but not the raw source files:
+## Test
 
 ```bash
-git add app.py bootstrap.py src requirements.txt METHODOLOGY.md README_SETUP.md data/processed models .streamlit
-
-git commit -m "Add historical renewable project forecasting"
-git push
+uv run pytest -q
 ```
 
-For Render, use:
+## Deploy
+
+Streamlit Community Cloud:
+
+```text
+Entry point: app.py
+Python: 3.13
+```
+
+Render:
 
 ```text
 Build command: pip install -r requirements.txt
 Start command: streamlit run app.py --server.address 0.0.0.0 --server.port $PORT --server.headless true
 ```
 
-## What is automated and what is not
-
-The code automates downloading where the archive exposes usable captures, cleaning, record linkage, label construction, chronological model training, validation metrics and the Streamlit interface. Historical government files can disappear from the live GOV.UK page, so a fully automatic archive download cannot be guaranteed. The application refuses to train on fewer than eight snapshots to prevent a convincing-looking but meaningless forecast.
+The processed data and fitted Model v2 bundle must be committed for hosts that
+do not rebuild external data during deployment.

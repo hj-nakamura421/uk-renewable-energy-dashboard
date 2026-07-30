@@ -1,150 +1,147 @@
 # UK Energy Infrastructure Intelligence Platform
 
-A Python and Streamlit platform for screening UK renewable energy infrastructure projects using public planning data, live grid context, geospatial mapping, regional opportunity ranking and simplified offshore wind feasibility modelling.
+A deployed Python and Streamlit platform for exploring UK renewable-energy
+projects, reconstructing their histories and testing leakage-aware
+time-to-operation forecasts.
 
-## Live App
+**Live app:** https://uk-renewable-project-screening.streamlit.app/
 
-https://uk-renewable-project-screening.streamlit.app/
+## Why this project is different
 
-## Project Summary
+The project does not promote a model simply because it is labelled “AI”.
+Model v2 compares a transparent empirical survival model, a logistic survival
+model and a CatBoost challenger on later historical project cohorts. The
+CatBoost model is deployed only if it improves probability reliability.
 
-This project turns public UK renewable energy planning data into an interactive infrastructure screening tool. It allows users to search and filter renewable projects, compare regional capacity, map project locations, shortlist opportunities, generate project briefs and test simplified offshore wind feasibility assumptions.
+The current packaged release is deliberately labelled **research-only**:
+corrected validation shows that the available 15 REPD snapshots are not yet
+enough for decision-grade forecasts. That limitation is visible in the app
+rather than hidden behind a high but misleading accuracy number.
 
-The aim is to connect mechanical engineering, energy infrastructure and data analysis in a practical deployed project.
+## Main capabilities
 
-## What It Does
+- Search and filter current UK renewable-infrastructure projects
+- Explore project histories and development-stage changes
+- Map projects with interactive zoom and probability colouring
+- Estimate two-, three- and five-year time-to-operation probabilities
+- Compare the deployed model with logistic and CatBoost challengers
+- Inspect ROC-AUC, average precision, Brier score and calibration
+- View positive signals, public-data risks and confidence levels
+- Stress-test Bank Rate, construction costs, grid delays, CfD support and
+  policy conditions
+- Download filtered forecasts and individual project briefs
+- Explore regional probability-weighted capacity
+- Run automated data-quality checks and GitHub Actions tests
 
-- Search and filter UK renewable energy projects
-- Map project locations using converted British National Grid coordinates
-- Rank regions by renewable infrastructure opportunity
-- Identify high-scoring projects and under-construction projects
-- Build and download a project shortlist
-- Compare two renewable projects side by side
-- Generate downloadable project briefs
-- Add live GB grid context using carbon intensity and generation mix data
-- Model simplified offshore wind generation, revenue, CAPEX, payback and carbon savings
-- Explain project screening scores using capacity, planning maturity, technology relevance and data confidence
-- Estimate project risk using development stage, scale, missing planning data and offshore complexity
+## Model v2
 
-### Overview
+The forecasting pipeline uses a discrete-time survival formulation. Each
+project contributes annual at-risk intervals until it becomes operational or
+its history is censored. This prevents recently observed unresolved projects
+from being incorrectly labelled as failures.
 
-![Overview](assets/screenshots/overview.png)
+Features include:
 
-### Map
+- capacity, technology, region, country and stage
+- project age and time in current stage
+- observed stage changes and capacity revisions
+- planning, consent and construction timing
+- CfD evidence and public-data completeness
+- developer completion history available at the snapshot
+- technology-region completion history available at the snapshot
 
-![Map](assets/screenshots/map.png)
+The test population contains only fully observed cohorts. Test projects are
+purged from the corresponding survival-training rows.
 
-### Regional Ranking
+## External context
 
-![Regional Ranking](assets/screenshots/regional-ranking.png)
+The packaged macro context is downloaded from:
 
-### Offshore Model
+- Office for National Statistics Consumer Prices Index
+- Office for National Statistics infrastructure Construction Output Price Index
+- Bank of England official Bank Rate database
 
-![Offshore Model](assets/screenshots/offshore-model.png)
+These values power a clearly labelled scenario layer. They are not treated as
+trained causal features while the dataset contains too few independent time
+snapshots to estimate political or inflation effects reliably.
 
-## Tech Stack
+## Quick start
 
-- Python
-- Streamlit
-- pandas
-- Plotly
-- pyproj
-- requests
-- Git/GitHub
-- Streamlit Community Cloud
+### Simplest option on macOS
 
-## Data
+Double-click `run_app.command`.
 
-The project uses public UK renewable energy planning data stored in:
+### Terminal
 
-```text
-data/renewable_projects.csv
+```bash
+cd ~/Code/offshore-energy-dashboard
+uv sync
+uv run streamlit run app.py
 ```
 
-Live grid context is added using public carbon intensity and generation mix data.
+To refresh official macro context and rebuild the models from the packaged
+historical panel:
 
-## Engineering Relevance
+```bash
+uv run python bootstrap.py --skip-download
+```
 
-This project demonstrates:
+To run the checks:
 
-- data cleaning
-- geospatial coordinate conversion
-- renewable infrastructure project screening
-- project risk scoring
-- regional opportunity analysis
-- basic techno-economic modelling
-- offshore wind feasibility estimation
-- dashboard deployment
-- technical documentation and communication
+```bash
+uv run pytest -q
+```
 
-## Project Structure
+## Project structure
 
 ```text
 offshore-energy-dashboard/
 ├── app.py
+├── bootstrap.py
+├── shared_ui.py
+├── pages/
+│   ├── 1_Project_Explorer.py
+│   └── 2_Forecasting.py
+├── src/
+│   ├── data_quality.py
+│   ├── external_factors.py
+│   ├── model.py
+│   ├── repd_clean.py
+│   ├── repd_download.py
+│   └── scenario.py
+├── tests/
 ├── data/
-│   └── renewable_projects.csv
-├── assets/
-│   └── screenshots/
-│       ├── overview.png
-│       ├── map.png
-│       ├── regional-ranking.png
-│       └── offshore-model.png
-├── README.md
+│   ├── processed/
+│   └── raw/repd/
+├── models/
+├── MODEL_CARD.md
 ├── METHODOLOGY.md
-├── TECHNICAL_NOTE.md
-├── AI_USE.md
-├── LEARNING_LOG.md
-├── pyproject.toml
-└── uv.lock
+├── ARCHITECTURE.md
+└── PRODUCT_ROADMAP.md
 ```
 
-## Methodology
+## Reproducibility and safeguards
 
-The platform includes a simplified screening model based on:
+- Source snapshots are deduplicated at `snapshot_date × project_key`.
+- Model features are derived only from information visible at the origin
+  snapshot.
+- Partially followed projects are right-censored.
+- Model promotion is based primarily on temporal-holdout Brier score, not
+  training accuracy.
+- The app exposes model status, data quality and limitations.
+- Tests protect label construction, censoring, scenario direction and source
+  grain.
 
-- capacity scale
-- planning maturity
-- technology relevance
-- data confidence
+## Important limitations
 
-It also includes a simplified risk level based on:
-
-- development stage
-- project scale
-- missing planning information
-- offshore infrastructure complexity
-
-The offshore wind model estimates:
-
-- annual energy generation
-- turbine count
-- annual revenue
-- CAPEX
-- simple payback period
-- lifetime revenue
-- annual carbon savings
-- lifetime carbon savings
-
-Full details are available in `METHODOLOGY.md`.
-
-## Limitations
-
-This is an educational and portfolio project. The screening score, risk level and offshore model are simplified and should not be treated as investment-grade analysis.
-
-The model does not include detailed wind resource modelling, financing, operational expenditure, grid connection costs, curtailment, CfD pricing, construction risk, decommissioning costs or formal planning-risk modelling.
-
-## Future Improvements
-
-Potential future improvements include:
-
-- automated dataset refresh
-- PDF project reports
-- more detailed offshore wind assumptions
-- grid connection and constraint data
-- richer regional energy infrastructure analysis
-- user-defined scoring weightings
-- AI-assisted project search and summarisation
+- The panel contains only 15 independent source snapshots.
+- REPD's inclusion threshold changed from 1 MW to 150 kW in 2021.
+- Historical field definitions and coverage changed over time.
+- Entity resolution can be imperfect when stable reference IDs are absent.
+- Public data omit private finance, land, equipment, detailed grid studies and
+  confidential contract terms.
+- Scenario adjustments are stress assumptions, not causal estimates.
+- Outputs are research and portfolio work, not investment advice.
 
 ## Author
 

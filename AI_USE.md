@@ -13,6 +13,9 @@ AI helped with:
 - improving documentation wording
 - structuring the project into stages
 - explaining how to use Git, Terminal and deployment tools
+- auditing temporal validation and finding the all-positive test-set problem
+- implementing a discrete-time survival pipeline and CatBoost challenger
+- designing automated data-quality and model-selection safeguards
 
 ## Human Contribution
 
@@ -28,6 +31,9 @@ I focused on understanding:
 - what the model assumptions are
 - what the limitations are
 - how to explain the project in interviews
+- why unresolved projects require censoring
+- why a more complex AI model should be rejected when it performs worse
+- why macroeconomic scenarios are separated from trained probability estimates
 
 ## Why This Matters
 

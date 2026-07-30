@@ -1,0 +1,116 @@
+{
+  "generated_at": "2026-07-30T11:10:10.128960+00:00",
+  "grain": "one project per REPD source snapshot",
+  "rows": 103579,
+  "columns": 29,
+  "projects": 19145,
+  "snapshots": 15,
+  "snapshot_start": "2019-09-25",
+  "snapshot_end": "2026-05-06",
+  "duplicate_snapshot_project_rows": 0,
+  "fallback_project_key_rate": 0.0807,
+  "negative_capacity_rows": 0,
+  "future_snapshot_rows": 0,
+  "missing_required_columns": [],
+  "invalid_stages": [],
+  "null_rates": {
+    "project_key": 0.0,
+    "snapshot_date": 0.0,
+    "site_name": 0.0,
+    "technology": 0.0,
+    "stage": 0.0,
+    "capacity_mw": 0.092
+  },
+  "snapshot_counts": [
+    {
+      "snapshot_date": "2019-09-25",
+      "rows": 3204,
+      "projects": 3204
+    },
+    {
+      "snapshot_date": "2020-05-10",
+      "rows": 3418,
+      "projects": 3418
+    },
+    {
+      "snapshot_date": "2020-09-28",
+      "rows": 6401,
+      "projects": 6401
+    },
+    {
+      "snapshot_date": "2021-03-10",
+      "rows": 3933,
+      "projects": 3933
+    },
+    {
+      "snapshot_date": "2021-12-02",
+      "rows": 6655,
+      "projects": 6655
+    },
+    {
+      "snapshot_date": "2022-06-11",
+      "rows": 4593,
+      "projects": 4593
+    },
+    {
+      "snapshot_date": "2023-03-13",
+      "rows": 7204,
+      "projects": 7204
+    },
+    {
+      "snapshot_date": "2023-06-19",
+      "rows": 5998,
+      "projects": 5998
+    },
+    {
+      "snapshot_date": "2023-12-16",
+      "rows": 6851,
+      "projects": 6851
+    },
+    {
+      "snapshot_date": "2024-03-27",
+      "rows": 7204,
+      "projects": 7204
+    },
+    {
+      "snapshot_date": "2024-09-11",
+      "rows": 7913,
+      "projects": 7913
+    },
+    {
+      "snapshot_date": "2025-06-19",
+      "rows": 9104,
+      "projects": 9104
+    },
+    {
+      "snapshot_date": "2025-09-10",
+      "rows": 9480,
+      "projects": 9480
+    },
+    {
+      "snapshot_date": "2025-12-11",
+      "rows": 10881,
+      "projects": 10881
+    },
+    {
+      "snapshot_date": "2026-05-06",
+      "rows": 10740,
+      "projects": 10740
+    }
+  ],
+  "issues": [
+    {
+      "severity": "high",
+      "check": "temporal_coverage",
+      "evidence": 15,
+      "impact": "The number of independent time points is too small to estimate macroeconomic effects reliably."
+    },
+    {
+      "severity": "medium",
+      "check": "entity_resolution",
+      "evidence": 0.0807,
+      "impact": "Projects without stable reference IDs are more vulnerable to false matches or split histories."
+    }
+  ],
+  "readiness": "needs_caveats"
+}
