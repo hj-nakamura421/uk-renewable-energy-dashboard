@@ -1,24 +1,63 @@
-# UK Energy Infrastructure Intelligence Platform
+# UK Renewable Infrastructure Intelligence — Modelling Workspace
 
-A deployed Python and Streamlit platform for exploring UK renewable-energy
-projects, reconstructing their histories and testing leakage-aware
-time-to-operation forecasts.
+An independent decision-support project built around UK renewable planning
+histories. I reconstructed those histories, developed time-to-operation models
+and tested them on later project cohorts. When validation showed useful relative
+ranking but unreliable literal probabilities, I redesigned the public ranking
+interface around the evidence the model could support.
 
-**Live app:** https://uk-renewable-project-screening.streamlit.app/
+**Evidence boundary: only 15 independent REPD snapshots.** Probability calibration
+did not clear the public release criterion. The [public Forecast v2.2 platform](https://uk-renewable-intelligence.github.io/)
+publishes a two-year relative ranking and withholds project-level percentages
+from that interface. Its experimental capacity aggregates retain uncalibrated
+research scores; aggregation does not repair probability error.
 
-## Why this project is different
+This repository is the **Python/Streamlit research workspace**. Its Model v2
+pipeline and probability outputs remain available for reproducibility and
+experimentation. Its Python package version is **0.2.0**; the separate web
+platform is **2.2.0**, serving forecasting release **v2.2**. These identify
+different components.
 
-The project does not promote a model simply because it is labelled “AI”.
-Model v2 compares a transparent empirical survival model, a logistic survival
-model and a CatBoost challenger on later historical project cohorts. The
-CatBoost model is deployed only if it improves probability reliability.
+## For portfolio reviewers — 2-minute tour
 
-The current packaged release is deliberately labelled **research-only**:
-corrected validation shows that the available 15 REPD snapshots are not yet
-enough for decision-grade forecasts. That limitation is visible in the app
-rather than hidden behind a high but misleading accuracy number.
+1. [Open the public dashboard](https://uk-renewable-intelligence.github.io/).
+2. [Review forecasting evidence](https://uk-renewable-intelligence.github.io/forecasting/#model-evidence).
+3. [See why literal probabilities were withheld](https://uk-renewable-intelligence.github.io/forecasting/#forecast-performance).
+4. [Read the engineering case study](https://uk-renewable-intelligence.github.io/about/), then inspect [methodology](METHODOLOGY.md) and [model source](src/model.py).
 
-## Main capabilities
+[Live research workspace](https://uk-renewable-project-screening.streamlit.app/) ·
+[Public interface and v2.2 audit source](https://github.com/uk-renewable-intelligence/uk-renewable-intelligence.github.io)
+
+## What I engineered
+
+- Reconciled changing REPD snapshots and reconstructed project histories in [the cleaning pipeline](src/repd_clean.py).
+- Built censored time-to-event forecasting and compared empirical, logistic and CatBoost candidates in [the model pipeline](src/model.py).
+- Designed temporal holdouts, removed test projects from training histories and evaluated ranking and calibration separately.
+- Added [data-quality checks](src/data_quality.py), [external-context ingestion](src/external_factors.py), [scenario analysis](src/scenario.py) and [automated tests](tests/).
+- Extended the project with horizon release gates and a CatBoost tie-breaker in the [public platform's audit](https://github.com/uk-renewable-intelligence/uk-renewable-intelligence.github.io/tree/main/analysis).
+- Built the JavaScript/Leaflet public interface and automated static deployment in the [web repository](https://github.com/uk-renewable-intelligence/uk-renewable-intelligence.github.io).
+
+## What failed / what I changed
+
+Earlier fixed-horizon evaluation included projects without sufficient follow-up,
+giving misleading test outcomes. I rebuilt the targets with censoring and used
+fully observed, project-purged temporal cohorts.
+
+The later calibration audit found that useful ranking did not justify literal
+probabilities. I withheld project percentages from the public ranking interface
+and the five-year public output. The standalone CatBoost challenger also failed
+to improve on the empirical ordering; v2.2 uses it only to resolve ties where
+the evaluated combination improved ranking. The [audit and release decisions](https://uk-renewable-intelligence.github.io/forecasting/#forecast-performance)
+remain public.
+
+## Development timeline
+
+- **Initial prototype / v1:** fixed-horizon prediction and project exploration; later review exposed incomplete-follow-up bias.
+- **Model v2:** censored survival targets, temporal holdouts and empirical/logistic/CatBoost comparison in this workspace.
+- **Public ranking release:** calibration audit and withdrawal of literal project probabilities from the ranking interface.
+- **Forecast v2.2:** empirical ordering with a CatBoost tie-breaker, published validation evidence and an interactive public workbench.
+
+## Research workspace capabilities
 
 - Search and filter current UK renewable-infrastructure projects
 - Explore project histories and development-stage changes
@@ -34,6 +73,11 @@ rather than hidden behind a high but misleading accuracy number.
 - Run automated data-quality checks and GitHub Actions tests
 
 ## Model v2
+
+Survival modelling estimates how the chance of reaching operation changes as a
+project spends longer in development. Censoring means an unresolved project
+contributes only its observed follow-up, without being counted as a failure
+because the data collection ended.
 
 The forecasting pipeline uses a discrete-time survival formulation. Each
 project contributes annual at-risk intervals until it becomes operational or
@@ -74,7 +118,8 @@ Double-click `run_app.command`.
 ### Terminal
 
 ```bash
-cd ~/Code/offshore-energy-dashboard
+git clone https://github.com/hj-nakamura421/uk-renewable-energy-dashboard.git
+cd uk-renewable-energy-dashboard
 uv sync
 uv run streamlit run app.py
 ```
@@ -95,7 +140,7 @@ uv run pytest -q
 ## Project structure
 
 ```text
-offshore-energy-dashboard/
+uk-renewable-energy-dashboard/
 ├── app.py
 ├── bootstrap.py
 ├── shared_ui.py

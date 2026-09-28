@@ -3,7 +3,8 @@
 ## Run the packaged application
 
 ```bash
-cd ~/Code/offshore-energy-dashboard
+git clone https://github.com/hj-nakamura421/uk-renewable-energy-dashboard.git
+cd uk-renewable-energy-dashboard
 uv sync
 uv run streamlit run app.py
 ```
